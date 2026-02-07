@@ -1,0 +1,9 @@
+{
+  "name": "DSE Hunter V13.4",
+  "short_name": "數據獵人",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#020617",
+  "theme_color": "#d4af37",
+  "icons": [{ "src": "https://cdn-icons-png.flaticon.com/512/3067/3067451.png", "sizes": "512x512", "type": "image/png" }]
+}
