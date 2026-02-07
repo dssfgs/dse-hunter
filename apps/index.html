@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0f172a">
+    <title>數據獵人 V13.4：2026 DSE 戰略版</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.8/purify.min.js"></script>
+    <style>
+        :root { --gold: #d4af37; --bg: #020617; --card: #1e293b; --accent: #38bdf8; --red: #ef4444; --green: #10b981; --purple: #a855f7; --text: #f8fafc; }
+        body { background: var(--bg); color: var(--text); font-family: 'PingFang HK', sans-serif; margin: 0; padding: 10px; display: flex; justify-content: center; overflow-x: hidden; }
+        .app-container { width: 100%; max-width: 480px; display: flex; flex-direction: column; gap: 15px; }
+        .card { background: var(--card); border: 2px solid var(--gold); border-radius: 20px; padding: 20px; box-shadow: 0 10px 40px rgba(0,0,0,0.8); position: relative; }
+        .spinner { border: 3px solid rgba(255,255,255,0.1); border-top: 3px solid var(--accent); border-radius: 50%; width: 24px; height: 24px; animation: spin 1s linear infinite; display: none; margin: 10px auto; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .opt-btn { background: #334155; color: white; border: 1px solid #475569; padding: 15px; border-radius: 12px; cursor: pointer; font-weight: bold; font-size: 15px; transition: 0.2s; outline: none; width: 100%; }
+        .opt-btn:active { transform: scale(0.96); background: var(--gold); color: black; }
+        .boss-btn { background: #1e293b; color: #475569; border: 2px dashed #475569; opacity: 0.6; pointer-events: none; }
+        .boss-btn.unlocked { background: linear-gradient(45deg, var(--purple), var(--red)); color: white; border: none; opacity: 1; pointer-events: auto; animation: pulse 2s infinite; }
+        @keyframes pulse { 0% { box-shadow: 0 0 10px var(--purple); } 50% { box-shadow: 0 0 20px var(--red); } 100% { box-shadow: 0 0 10px var(--purple); } }
+        .analysis-box { font-size: 13px; background: rgba(56, 189, 248, 0.1); border-left: 5px solid var(--accent); padding: 15px; border-radius: 10px; margin: 15px 0; display: flex; align-items: center; gap: 15px; }
+        #weakness-chart { width: 50px; height: 50px; border-radius: 50%; flex-shrink: 0; }
+        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.96); z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(15px); }
+        .modal-content { background: var(--card); width: 85%; max-width: 380px; padding: 25px; border-radius: 25px; border: 2px solid var(--gold); max-height: 80vh; overflow-y: auto; }
+        #privacy-notice { position: fixed; top: 10px; width: 85%; max-width: 400px; background: var(--card); border: 2px solid var(--accent); padding: 15px; border-radius: 15px; z-index: 2000; display: none; }
+        .ap-badge { background: var(--gold); color: black; padding: 2px 8px; border-radius: 10px; font-size: 12px; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div id="privacy-notice">
+    🛡️ 數據本地存儲聲明：本程式不收集個人資料。
+    <button onclick="Core.acceptPrivacy()" style="background:var(--accent); border:none; padding:5px; border-radius:5px; cursor:pointer;">同意</button>
+</div>
+
+<div class="app-container">
+    <div id="view-setup" class="card">
+        <h2 style="color:var(--gold); text-align:center;">數據獵人 V13.4</h2>
+        <input type="text" id="in-name" placeholder="輸入 ID" style="width:100%; padding:15px; margin-bottom:15px; border-radius:10px; background:#020617; color:white; border:1px solid #334155; box-sizing:border-box;">
+        <button onclick="Core.handleStart()" class="opt-btn" style="background:var(--gold); color:black;">建立連結</button>
+    </div>
+
+    <div id="view-main" class="card" style="display:none;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <span id="ds-name" style="font-weight:900; color:var(--gold);">---</span>
+            <div style="display:flex; gap:10px;">
+                <span class="ap-badge">AP: <span id="ds-ap">0</span></span>
+                <input type="text" id="ds-inject" placeholder="G9" style="width:40px; background:none; border:1px solid #334155; color:var(--accent); text-align:center;">
+            </div>
+        </div>
+
+        <div class="analysis-box">
+            <div id="weakness-chart"></div>
+            <div id="ai-recommendation">初始化系統...</div>
+        </div>
+
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+            <button onclick="Core.handleSync('STR')" class="opt-btn">⚔️ 代數方程</button>
+            <button onclick="Core.handleSync('DEX_SD')" class="opt-btn">📊 標準差</button>
+            <button onclick="Core.handleSync('GEO')" class="opt-btn">📐 圓面積</button>
+            <button onclick="Core.redeemDaily()" class="opt-btn" style="background:#0f172a;">🎁 每日領取</button>
+            <button id="btn-boss-tri" onclick="Core.handleSync('BOSS_TRI')" class="opt-btn boss-btn">🔱 三角 BOSS</button>
+            <button id="btn-boss-prob" onclick="Core.handleSync('BOSS_PROB')" class="opt-btn boss-btn">🎲 機率 BOSS</button>
+        </div>
+        <button onclick="Core.reset()" style="margin-top:20px; background:none; border:none; color:#475569; width:100%; cursor:pointer;">重置數據</button>
+    </div>
+</div>
+
+<div id="modal" class="modal">
+    <div class="modal-content">
+        <div id="loading-spinner" class="spinner"></div>
+        <div id="q-body" style="font-size:1.1rem; margin-bottom:20px;"></div>
+        <div id="q-options" style="display:grid; gap:10px;"></div>
+        <div id="feedback" style="display:none; margin-top:15px; border-top:1px solid #475569; padding-top:10px;">
+            <div id="res-title" style="font-size:1.2rem; font-weight:bold;"></div>
+            <div id="res-steps" style="font-size:13px; margin:10px 0; color:#cbd5e1;"></div>
+            <button onclick="document.getElementById('modal').style.display='none'" class="opt-btn" style="background:var(--gold); color:black;">返回</button>
+        </div>
+    </div>
+</div>
+
+<script>
+/** 核心邏輯 */
+const MathJaxLoader = {
+    loaded: false,
+    ensure(cb) {
+        if (this.loaded) return cb();
+        window.MathJax = { tex: { inlineMath: [['$', '$']] }, startup: { typeset: false } };
+        const s = document.createElement('script');
+        s.src = 'https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';
+        s.async = true;
+        s.onload = () => { this.loaded = true; cb(); };
+        s.onerror = () => { alert("渲染失敗，請檢查網絡"); cb(); };
+        document.head.appendChild(s);
+    }
+};
+
+const Analytics = {
+    history: JSON.parse(localStorage.getItem('dse_v13_hist') || '[]'),
+    record(type, ok) {
+        this.history.push({type, ok});
+        if(this.history.length > 20) this.history.shift();
+        localStorage.setItem('dse_v13_hist', JSON.stringify(this.history));
+    },
+    updateUI() {
+        const total = this.history.length || 1;
+        const fails = this.history.filter(h => !h.ok).length;
+        const failRate = (fails / total) * 100;
+        document.getElementById('weakness-chart').style.background = `conic-gradient(var(--red) ${failRate}%, var(--green) 0)`;
+        document.getElementById('ai-recommendation').textContent = failRate > 30 ? "⚠️ 系統不穩定，建議複習錯誤題目。" : "🚀 鏈路穩定，表現優秀。";
+    }
+};
+
+const Generator = {
+    rand(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; },
+    safeGen(type, lv = 7) {
+        const mod = lv - 7;
+        if(type === 'STR') {
+            const a = this.rand(2, 5+mod), x = this.rand(-10, 10), c = a * x;
+            return { q: `解方程：$${a}x = ${c}$`, a: `$${x}$`, o: [ `$${x}$`, `$${-x}$`, `$${x+1}$`, `$0$` ], s: [`除法運算：$x = ${c} / ${a} = ${x}$`] };
+        }
+        if(type === 'DEX_SD') {
+            const sd = this.rand(3, 8), k = 2;
+            return { q: `已知 SD 為 $${sd}$。若將所有數據乘以 $${k}$，新 SD 為？`, a: `$${sd*k}$`, o: [`$${sd*k}$`, `$${sd}$`, `$${sd+k}$`, `$${sd*sd}$`], s: [`性質：乘法會影響 SD。$${sd} \\times ${k} = ${sd*k}$`] };
+        }
+        if(type === 'GEO') {
+            const r = this.rand(3, 10);
+            return { q: `半徑為 $${r}$ 的圓面積？ (取 $\\pi$)`, a: `$${r*r}\\pi$`, o: [`$${r*r}\\pi$`, `$${2*r}\\pi$`, `$${r}\\pi$`, `$${r*r*r}\\pi$`], s: [`公式：$\\pi r^2 = \\pi (${r})^2 = ${r*r}\\pi$`] };
+        }
+        return { q: "BOSS 挑戰：機率與三角綜合運用。", a: "1/2", o: ["1/2","1/3","1/4","1"], s: ["BOSS 級題目需要精確計算。"] };
+    }
+};
+
+const Core = {
+    p: { name: "", ap: 0, lastDaily: 0 },
+    init() {
+        if(!localStorage.getItem('dse_v13_priv')) document.getElementById('privacy-notice').style.display = 'block';
+        this.load();
+    },
+    acceptPrivacy() { localStorage.setItem('dse_v13_priv', 'true'); document.getElementById('privacy-notice').style.display = 'none'; },
+    handleStart() {
+        const n = document.getElementById('in-name').value;
+        if(!n) return;
+        this.p.name = DOMPurify.sanitize(n);
+        this.save();
+        document.getElementById('view-setup').style.display='none';
+        document.getElementById('view-main').style.display='block';
+    },
+    handleSync(type) {
+        document.getElementById('loading-spinner').style.display = 'block';
+        document.getElementById('q-body').innerHTML = "";
+        document.getElementById('q-options').innerHTML = "";
+        MathJaxLoader.ensure(() => {
+            document.getElementById('loading-spinner').style.display = 'none';
+            const lv = parseInt((document.getElementById('ds-inject').value || "7").replace(/\D/g,'')) || 7;
+            const q = Generator.safeGen(type, lv);
+            document.getElementById('q-body').innerHTML = DOMPurify.sanitize(q.q);
+            document.getElementById('feedback').style.display = 'none';
+            const opts = document.getElementById('q-options');
+            q.o.sort(()=>Math.random()-0.5).forEach(o => {
+                const b = document.createElement('button');
+                b.className = 'opt-btn'; b.textContent = o;
+                b.onclick = () => {
+                    const ok = o === q.a;
+                    Analytics.record(type, ok);
+                    this.showFeedback(ok, q);
+                };
+                opts.appendChild(b);
+            });
+            document.getElementById('modal').style.display = 'flex';
+            if(window.MathJax) MathJax.typesetPromise();
+        });
+    },
+    redeemDaily() {
+        if(Date.now() - this.p.lastDaily < 86400000) return alert("今日已領取！");
+        this.p.ap += 50; this.p.lastDaily = Date.now();
+        this.save(); alert("獲得 50 AP！");
+    },
+    showFeedback(ok, q) {
+        document.getElementById('q-options').innerHTML = "";
+        document.getElementById('feedback').style.display = 'block';
+        const t = document.getElementById('res-title');
+        t.textContent = ok ? "✅ 同步完成" : "❌ 同步失敗";
+        t.style.color = ok ? 'var(--green)' : 'var(--red)';
+        document.getElementById('res-steps').innerHTML = DOMPurify.sanitize(q.s.join('<br>'));
+        if(ok) { this.p.ap += 10; this.save(); }
+    },
+    save() { localStorage.setItem('dse_v13_p', JSON.stringify(this.p)); this.updateUI(); },
+    load() {
+        const d = localStorage.getItem('dse_v13_p');
+        if(d) { this.p = JSON.parse(d); document.getElementById('view-setup').style.display='none'; document.getElementById('view-main').style.display='block'; this.updateUI(); }
+    },
+    updateUI() {
+        document.getElementById('ds-name').textContent = this.p.name;
+        document.getElementById('ds-ap').textContent = this.p.ap;
+        Analytics.updateUI();
+        document.getElementById('btn-boss-tri').className = `opt-btn boss-btn ${this.p.ap >= 100 ? 'unlocked' : ''}`;
+        document.getElementById('btn-boss-prob').className = `opt-btn boss-btn ${this.p.ap >= 200 ? 'unlocked' : ''}`;
+    },
+    reset() { if(confirm("確定重置？")) { localStorage.clear(); location.reload(); } }
+};
+Core.init();
+</script>
+</body>
+</html>
