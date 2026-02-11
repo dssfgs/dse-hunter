@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#0f172a">
-    <title>數據獵人 V13.4：2026 DSE 戰略版</title>
+    <title>數學勇者 V1.2：屬性成長系統</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.8/purify.min.js"></script>
     <style>
         :root { --gold: #d4af37; --bg: #020617; --card: #1e293b; --accent: #38bdf8; --red: #ef4444; --green: #10b981; --purple: #a855f7; --text: #f8fafc; }
@@ -16,6 +16,7 @@
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         .opt-btn { background: #334155; color: white; border: 1px solid #475569; padding: 15px; border-radius: 12px; cursor: pointer; font-weight: bold; font-size: 15px; transition: 0.2s; outline: none; width: 100%; }
         .opt-btn:active { transform: scale(0.96); background: var(--gold); color: black; }
+        .attribute-btn { background: linear-gradient(135deg, #334155, #1e293b); border: 2px solid var(--accent); }
         .boss-btn { background: #1e293b; color: #475569; border: 2px dashed #475569; opacity: 0.6; pointer-events: none; }
         .boss-btn.unlocked { background: linear-gradient(45deg, var(--purple), var(--red)); color: white; border: none; opacity: 1; pointer-events: auto; animation: pulse 2s infinite; }
         @keyframes pulse { 0% { box-shadow: 0 0 10px var(--purple); } 50% { box-shadow: 0 0 20px var(--red); } 100% { box-shadow: 0 0 10px var(--purple); } }
@@ -24,7 +25,30 @@
         .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.96); z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(15px); }
         .modal-content { background: var(--card); width: 85%; max-width: 380px; padding: 25px; border-radius: 25px; border: 2px solid var(--gold); max-height: 80vh; overflow-y: auto; }
         #privacy-notice { position: fixed; top: 10px; width: 85%; max-width: 400px; background: var(--card); border: 2px solid var(--accent); padding: 15px; border-radius: 15px; z-index: 2000; display: none; }
-        .ap-badge { background: var(--gold); color: black; padding: 2px 8px; border-radius: 10px; font-size: 12px; font-weight: bold; }
+        .attribute-badge { background: linear-gradient(135deg, #3b82f6, #8b5cf6); color: white; padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: bold; display: inline-block; margin: 2px; }
+        .attribute-selector { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 15px 0; }
+        .subtype-btn { background: #475569; border: 1px solid #64748b; padding: 12px; border-radius: 10px; font-size: 14px; }
+        .subtype-btn:hover { background: #4ade80; color: black; }
+        .back-btn { background: #475569; border: none; padding: 10px; border-radius: 10px; color: white; cursor: pointer; margin-bottom: 15px; }
+        .stats-container { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 15px 0; }
+        .stat-item { background: rgba(56, 189, 248, 0.1); border-radius: 10px; padding: 10px; text-align: center; }
+        .stat-value { font-size: 20px; font-weight: bold; color: var(--gold); }
+        .stat-label { font-size: 12px; color: #94a3b8; }
+        .level-badge { background: var(--gold); color: black; padding: 2px 8px; border-radius: 10px; font-size: 12px; font-weight: bold; margin-left: 5px; }
+        .error-item { background: rgba(239, 68, 68, 0.1); border: 1px solid var(--red); border-radius: 10px; padding: 15px; margin-bottom: 15px; }
+        .error-type { color: var(--accent); font-size: 12px; margin-bottom: 5px; }
+        .error-question { margin: 10px 0; }
+        .error-answer { background: rgba(16, 185, 129, 0.1); color: var(--green); padding: 8px; border-radius: 5px; margin: 5px 0; }
+        .error-actions { display: flex; justify-content: space-between; margin-top: 10px; }
+        .challenge-btn { background: var(--gold); color: black; border: none; padding: 5px 10px; border-radius: 5px; font-size: 12px; cursor: pointer; }
+        .delete-btn { background: none; border: 1px solid var(--red); color: var(--red); padding: 5px 10px; border-radius: 5px; font-size: 12px; cursor: pointer; }
+        .attr-icon { font-size: 20px; display: block; margin-bottom: 5px; }
+        .str-color { color: #ef4444; }
+        .int-color { color: #3b82f6; }
+        .luc-color { color: #10b981; }
+        .wis-color { color: #8b5cf6; }
+        .dex-color { color: #f59e0b; }
+        .vit-color { color: #ec4899; }
     </style>
 </head>
 <body>
@@ -35,38 +59,161 @@
 </div>
 
 <div class="app-container">
+    <!-- 初始設置視圖 -->
     <div id="view-setup" class="card">
-        <h2 style="color:var(--gold); text-align:center;">數據獵人 V13.4</h2>
-        <input type="text" id="in-name" placeholder="輸入 ID" style="width:100%; padding:15px; margin-bottom:15px; border-radius:10px; background:#020617; color:white; border:1px solid #334155; box-sizing:border-box;">
-        <button onclick="Core.handleStart()" class="opt-btn" style="background:var(--gold); color:black;">建立連結</button>
+        <h2 style="color:var(--gold); text-align:center;">數學勇者 V1.2</h2>
+        <p style="text-align:center; color:#94a3b8; font-size:14px;">RPG屬性成長系統 - 公式變換增強版</p>
+        <input type="text" id="in-name" placeholder="輸入勇者名稱" style="width:100%; padding:15px; margin-bottom:15px; border-radius:10px; background:#020617; color:white; border:1px solid #334155; box-sizing:border-box;">
+        <button onclick="Core.handleStart()" class="opt-btn" style="background:var(--gold); color:black;">創建角色</button>
     </div>
 
+    <!-- 主視圖 -->
     <div id="view-main" class="card" style="display:none;">
         <div style="display:flex; justify-content:space-between; align-items:center;">
             <span id="ds-name" style="font-weight:900; color:var(--gold);">---</span>
-            <div style="display:flex; gap:10px;">
-                <span class="ap-badge">AP: <span id="ds-ap">0</span></span>
-                <input type="text" id="ds-inject" placeholder="G9" style="width:40px; background:none; border:1px solid #334155; color:var(--accent); text-align:center;">
+            <div style="display:flex; gap:5px;">
+                <span class="level-badge">Lv <span id="ds-level">1</span></span>
+                <span class="level-badge" style="background:var(--accent);">XP: <span id="ds-exp">0</span></span>
+            </div>
+        </div>
+
+        <div class="stats-container">
+            <div class="stat-item">
+                <div class="stat-value str-color" id="stat-str">0</div>
+                <div class="stat-label"><span class="attr-icon str-color">⚔️</span> STR</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value int-color" id="stat-int">0</div>
+                <div class="stat-label"><span class="attr-icon int-color">🧠</span> INT</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value luc-color" id="stat-luc">0</div>
+                <div class="stat-label"><span class="attr-icon luc-color">🍀</span> LUC</div>
+            </div>
+        </div>
+
+        <div class="stats-container">
+            <div class="stat-item">
+                <div class="stat-value wis-color" id="stat-wis">0</div>
+                <div class="stat-label"><span class="attr-icon wis-color">📖</span> WIS</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value dex-color" id="stat-dex">0</div>
+                <div class="stat-label"><span class="attr-icon dex-color">🎯</span> DEX</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value vit-color" id="stat-vit">0</div>
+                <div class="stat-label"><span class="attr-icon vit-color">❤️</span> VIT</div>
             </div>
         </div>
 
         <div class="analysis-box">
             <div id="weakness-chart"></div>
-            <div id="ai-recommendation">初始化系統...</div>
+            <div id="ai-recommendation">選擇修煉項目...</div>
         </div>
 
-        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-            <button onclick="Core.handleSync('STR')" class="opt-btn">⚔️ 代數方程</button>
-            <button onclick="Core.handleSync('DEX_SD')" class="opt-btn">📊 標準差</button>
-            <button onclick="Core.handleSync('GEO')" class="opt-btn">📐 圓面積</button>
-            <button onclick="Core.redeemDaily()" class="opt-btn" style="background:#0f172a;">🎁 每日領取</button>
-            <button id="btn-boss-tri" onclick="Core.handleSync('BOSS_TRI')" class="opt-btn boss-btn">🔱 三角 BOSS</button>
-            <button id="btn-boss-prob" onclick="Core.handleSync('BOSS_PROB')" class="opt-btn boss-btn">🎲 機率 BOSS</button>
+        <!-- 主選單 -->
+        <div id="main-menu">
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                <button onclick="Core.showAttributeMenu('STR')" class="opt-btn" style="border-color:var(--red);">⚔️ STR 修煉</button>
+                <button onclick="Core.showAttributeMenu('INT')" class="opt-btn" style="border-color:var(--accent);">🧠 INT 修煉</button>
+                <button onclick="Core.showAttributeMenu('WIS')" class="opt-btn" style="border-color:var(--purple);">📖 WIS 修煉</button>
+                <button onclick="Core.showAttributeMenu('EXT')" class="opt-btn attribute-btn">🌀 擴展單元</button>
+                <button onclick="Core.openErrorLog()" class="opt-btn" style="background:var(--red); border:none;">📖 錯誤之書 (<span id="error-count">0</span>)</button>
+                <button id="btn-boss-tri" onclick="Core.handleSync('BOSS_TRI')" class="opt-btn boss-btn">🔱 三角試煉</button>
+                <button id="btn-boss-prob" onclick="Core.handleSync('BOSS_PROB')" class="opt-btn boss-btn">🎲 概率迷宮</button>
+            </div>
+            <button onclick="Core.reset()" style="margin-top:20px; background:none; border:1px solid #475569; color:#475569; width:100%; cursor:pointer; padding:15px; border-radius:12px;">重置角色</button>
         </div>
-        <button onclick="Core.reset()" style="margin-top:20px; background:none; border:none; color:#475569; width:100%; cursor:pointer;">重置數據</button>
+
+        <!-- STR 修煉選單 -->
+        <div id="menu-STR" class="attribute-menu" style="display:none;">
+            <button class="back-btn" onclick="Core.backToMain()">← 返回</button>
+            <h3 style="color:var(--red);">⚔️ STR 修煉 - 力量挑戰</h3>
+            <div class="attribute-selector">
+                <button onclick="Core.handleSync('STR_LINEAR')" class="subtype-btn">線性方程</button>
+                <button onclick="Core.handleSync('STR_QUADRATIC')" class="subtype-btn">二次方程</button>
+                <button onclick="Core.handleSync('STR_SIMULTANEOUS')" class="subtype-btn">聯立方程</button>
+                <button onclick="Core.handleSync('STR_INDEX_LAWS')" class="subtype-btn">指數定律</button>
+                <button onclick="Core.handleSync('STR_FACTORIZATION')" class="subtype-btn">因式分解</button>
+                <button onclick="Core.handleSync('STR_FORMULA')" class="subtype-btn">公式變換</button>
+		<button onclick="Core.handleSync('STR_EXPONENT')" class="subtype-btn">指數方程</button>
+		<button onclick="Core.handleSync('STR_EXPONENT_LAWS')" class="subtype-btn">指數定律</button>
+            </div>
+        </div>
+
+        <!-- INT 修煉選單 -->
+        <div id="menu-INT" class="attribute-menu" style="display:none;">
+            <button class="back-btn" onclick="Core.backToMain()">← 返回</button>
+            <h3 style="color:var(--accent);">🧠 INT 修煉 - 智力挑戰</h3>
+            <div class="attribute-selector">
+                <button onclick="Core.handleSync('INT_COMBINATORICS')" class="subtype-btn">組合數學</button>
+                <button onclick="Core.handleSync('INT_LOGIC')" class="subtype-btn">邏輯推理</button>
+                <button onclick="Core.handleSync('INT_PATTERN')" class="subtype-btn">模式識別</button>
+                <button onclick="Core.handleSync('INT_PROBLEM')" class="subtype-btn">問題解決</button>
+                <button onclick="Core.handleSync('INT_ANALYSIS')" class="subtype-btn">數學分析</button>
+                <button onclick="Core.handleSync('INT_SERIES')" class="subtype-btn">數列計算</button>
+            </div>
+        </div>
+
+        <!-- WIS 修煉選單 -->
+        <div id="menu-WIS" class="attribute-menu" style="display:none;">
+            <button class="back-btn" onclick="Core.backToMain()">← 返回</button>
+            <h3 style="color:var(--purple);">📖 WIS 修煉 - 智慧挑戰</h3>
+            <div class="attribute-selector">
+                <button onclick="Core.handleSync('WIS_GEOMETRY')" class="subtype-btn">幾何證明</button>
+                <button onclick="Core.handleSync('WIS_TRIG')" class="subtype-btn">三角學</button>
+                <button onclick="Core.handleSync('WIS_CIRCLE')" class="subtype-btn">圓形幾何</button>
+                <button onclick="Core.handleSync('WIS_COORDINATE')" class="subtype-btn">坐標幾何</button>
+                <button onclick="Core.handleSync('WIS_VOLUME')" class="subtype-btn">體積計算</button>
+                <button onclick="Core.handleSync('WIS_ANGLE')" class="subtype-btn">角度關係</button>
+            </div>
+        </div>
+
+        <!-- 擴展單元選單 -->
+        <div id="menu-EXT" class="attribute-menu" style="display:none;">
+            <button class="back-btn" onclick="Core.backToMain()">← 返回</button>
+            <h3 style="color:var(--accent);">🌀 變數與圓方程</h3>
+            <div class="attribute-selector">
+                <button onclick="Core.handleSync('EXT_VAR')" class="subtype-btn">變數 Variation</button>
+                <button onclick="Core.handleSync('EXT_CIRCLE')" class="subtype-btn">圓方程 Circle</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 錯誤之書視圖 -->
+    <div id="view-errors" class="card" style="display:none;">
+        <button class="back-btn" onclick="Core.backToMain()">← 返回主頁</button>
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <h3 style="color:var(--red);">📖 錯誤之書</h3>
+            <div>
+                <button onclick="Core.exportErrors()" style="background:none; border:1px solid var(--accent); color:var(--accent); border-radius:5px; padding:5px 10px; font-size:12px; margin-right:5px;">導出</button>
+                <button onclick="Core.clearErrors()" style="background:none; border:1px solid var(--red); color:var(--red); border-radius:5px; padding:5px 10px; font-size:12px;">清空</button>
+            </div>
+        </div>
+        
+        <div style="display:flex; justify-content:space-between; align-items:center; margin:15px 0; padding:10px; background:rgba(239,68,68,0.1); border-radius:10px;">
+            <div>
+                <div style="color:var(--text); font-size:14px;">錯誤統計</div>
+                <div style="color:#94a3b8; font-size:12px;">
+                    STR: <span id="error-str">0</span> | 
+                    INT: <span id="error-int">0</span> | 
+                    WIS: <span id="error-wis">0</span>
+                </div>
+            </div>
+            <div style="text-align:right;">
+                <div style="color:var(--gold); font-size:14px;">錯誤率</div>
+                <div style="color:#94a3b8; font-size:12px;"><span id="error-rate">0%</span></div>
+            </div>
+        </div>
+        
+        <div id="error-list" style="max-height:60vh; overflow-y:auto; padding-right:5px;">
+            <!-- 錯誤列表會動態生成 -->
+        </div>
     </div>
 </div>
 
+<!-- 答題模態框 -->
 <div id="modal" class="modal">
     <div class="modal-content">
         <div id="loading-spinner" class="spinner"></div>
@@ -75,6 +222,9 @@
         <div id="feedback" style="display:none; margin-top:15px; border-top:1px solid #475569; padding-top:10px;">
             <div id="res-title" style="font-size:1.2rem; font-weight:bold;"></div>
             <div id="res-steps" style="font-size:13px; margin:10px 0; color:#cbd5e1;"></div>
+            <div id="attribute-gain" style="display:none; margin:10px 0; padding:10px; background:rgba(56, 189, 248, 0.1); border-radius:8px;">
+                <span id="gain-text"></span>
+            </div>
             <button onclick="document.getElementById('modal').style.display='none'" class="opt-btn" style="background:var(--gold); color:black;">返回</button>
         </div>
     </div>
@@ -86,121 +236,1517 @@ const MathJaxLoader = {
     loaded: false,
     ensure(cb) {
         if (this.loaded) return cb();
-        window.MathJax = { tex: { inlineMath: [['$', '$']] }, startup: { typeset: false } };
+        window.MathJax = { 
+            tex: { 
+                inlineMath: [['$', '$']],
+                displayMath: [['$$', '$$']],
+                processEscapes: true
+            }, 
+            startup: { 
+                typeset: false,
+                pageReady: () => {
+                    MathJax.startup.defaultPageReady();
+                    if(typeof cb === 'function') cb();
+                }
+            } 
+        };
         const s = document.createElement('script');
         s.src = 'https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';
         s.async = true;
-        s.onload = () => { this.loaded = true; cb(); };
-        s.onerror = () => { alert("渲染失敗，請檢查網絡"); cb(); };
+        s.onload = () => { 
+            this.loaded = true; 
+            if(typeof cb === 'function') cb();
+        };
+        s.onerror = () => { 
+            console.error("MathJax 加載失敗");
+            if(typeof cb === 'function') cb();
+        };
         document.head.appendChild(s);
     }
 };
 
 const Analytics = {
-    history: JSON.parse(localStorage.getItem('dse_v13_hist') || '[]'),
-    record(type, ok) {
-        this.history.push({type, ok});
-        if(this.history.length > 20) this.history.shift();
-        localStorage.setItem('dse_v13_hist', JSON.stringify(this.history));
+    history: JSON.parse(localStorage.getItem('math_hero_hist') || '[]'),
+    errors: JSON.parse(localStorage.getItem('math_hero_errors') || '[]'),
+    
+    record(type, ok, q) {
+        const record = {
+            type, 
+            ok, 
+            time: new Date().toLocaleString('zh-Hant'),
+            date: Date.now()
+        };
+        
+        this.history.push(record);
+        if(this.history.length > 100) this.history.shift();
+        
+        // 如果答錯，保存錯誤詳細信息
+        if(!ok && q) {
+            const errorRecord = {
+                id: Date.now(),
+                type: type,
+                time: record.time,
+                q: q.q,
+                a: q.a,
+                s: q.s,
+                o: q.o
+            };
+            this.errors.unshift(errorRecord); // 最新的錯誤在前面
+            
+            // 限制錯誤數量為50題
+            if(this.errors.length > 50) this.errors.pop();
+            
+            localStorage.setItem('math_hero_errors', JSON.stringify(this.errors));
+        }
+        
+        localStorage.setItem('math_hero_hist', JSON.stringify(this.history));
     },
-    updateUI() {
+    
+    removeError(index) {
+        this.errors.splice(index, 1);
+        localStorage.setItem('math_hero_errors', JSON.stringify(this.errors));
+    },
+    
+    clearErrors() {
+        if(this.errors.length === 0 || !confirm("確定要清空所有錯誤記錄嗎？")) return;
+        this.errors = [];
+        localStorage.setItem('math_hero_errors', JSON.stringify(this.errors));
+        Core.updateErrorUI();
+    },
+    
+    getWeaknessAnalysis() {
         const total = this.history.length || 1;
-        const fails = this.history.filter(h => !h.ok).length;
-        const failRate = (fails / total) * 100;
-        document.getElementById('weakness-chart').style.background = `conic-gradient(var(--red) ${failRate}%, var(--green) 0)`;
-        document.getElementById('ai-recommendation').textContent = failRate > 30 ? "⚠️ 系統不穩定，建議複習錯誤題目。" : "🚀 鏈路穩定，表現優秀。";
+        const recent = this.history.slice(-20);
+        
+        if(recent.length === 0) return { failRate: 0, recommendation: "開始修煉吧！" };
+        
+        const fails = recent.filter(h => !h.ok).length;
+        const failRate = Math.round((fails / recent.length) * 100);
+        
+        // 分析各類型錯誤率
+        const typeStats = {};
+        recent.forEach(h => {
+            const mainType = h.type.split('_')[0];
+            typeStats[mainType] = typeStats[mainType] || { total: 0, fails: 0 };
+            typeStats[mainType].total++;
+            if(!h.ok) typeStats[mainType].fails++;
+        });
+        
+        let recommendation = "修煉順利，繼續前進！";
+        for(const [type, stats] of Object.entries(typeStats)) {
+            const typeFailRate = Math.round((stats.fails / stats.total) * 100);
+            if(typeFailRate > 40) {
+                const typeNames = { STR: "力量(STR)", INT: "智力(INT)", WIS: "智慧(WIS)", EXT: "擴展單元" };
+                recommendation = `⚠️ ${typeNames[type] || type} 需要加強修煉`;
+                break;
+            }
+        }
+        
+        return { failRate, recommendation };
+    },
+    
+    getErrorStats() {
+        const str = this.errors.filter(e => e.type.startsWith('STR')).length;
+        const int = this.errors.filter(e => e.type.startsWith('INT')).length;
+        const wis = this.errors.filter(e => e.type.startsWith('WIS')).length;
+        const ext = this.errors.filter(e => e.type.startsWith('EXT')).length;
+        
+        const total = this.history.length || 1;
+        const failCount = this.history.filter(h => !h.ok).length;
+        const errorRate = Math.round((failCount / total) * 100);
+        
+        return { str, int, wis, ext, errorRate };
+    },
+    
+    updateUI() {
+        const analysis = this.getWeaknessAnalysis();
+        document.getElementById('weakness-chart').style.background = `conic-gradient(var(--red) ${analysis.failRate}%, var(--green) 0)`;
+        document.getElementById('ai-recommendation').textContent = analysis.recommendation;
+        document.getElementById('error-count').textContent = this.errors.length;
     }
 };
 
 const Generator = {
     rand(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; },
-    safeGen(type, lv = 7) {
+    
+    // STR 題目生成器 (代數相關)
+    generateSTR(type, lv = 1) {
+        const levelMod = Math.min(5, Math.floor(lv / 2));
+        
+        if(type === 'STR_LINEAR') {
+            const a = this.rand(2, 5 + levelMod);
+            const b = this.rand(-10 - levelMod, 10 + levelMod);
+            const x = this.rand(-8, 8);
+            const c = a * x + b;
+            return { 
+                q: `解方程：$${a}x ${b >= 0 ? '+' : ''}${b} = ${c}$`, 
+                a: `$${x}$`, 
+                o: [ `$${x}$`, `$${-x}$`, `$${x+1}$`, `$0$` ], 
+                s: [`步驟：${c} - ${b} = ${c-b}`, `$${a}x = ${c-b}$`, `$x = ${(c-b)} / ${a} = ${x}$`] 
+            };
+        }
+        
+        if(type === 'STR_QUADRATIC') {
+            const r1 = this.rand(-5, 5);
+            const r2 = this.rand(-5, 5);
+            if(r1 === r2) return this.generateSTR('STR_QUADRATIC', lv);
+            
+            const b = -(r1 + r2);
+            const c = r1 * r2;
+            
+            let equation;
+            if(b === 0) {
+                equation = `$x^2 ${c >= 0 ? '+' : ''}${c} = 0$`;
+            } else if(c === 0) {
+                equation = `$x^2 ${b > 0 ? '+' : ''}${b}x = 0$`;
+            } else {
+                equation = `$x^2 ${b > 0 ? '+' : ''}${b}x ${c >= 0 ? '+' : ''}${c} = 0$`;
+            }
+            
+            const roots = `$x = ${r1}$ 或 $x = ${r2}$`;
+            
+            return {
+                q: `解方程：${equation}`,
+                a: roots,
+                o: [
+                    roots,
+                    `$x = ${r1+1}$ 或 $x = ${r2}$`,
+                    `$x = ${r1}$ 或 $x = ${r2+1}$`,
+                    r1 * r2 > 0 ? "無實數解" : `$x = ${-r1}$ 或 $x = ${-r2}$`
+                ],
+                s: [
+                    `方法一：因式分解`,
+                    `原式可分解為 $(x ${r1 >= 0 ? '-' : '+'}${Math.abs(r1)})(x ${r2 >= 0 ? '-' : '+'}${Math.abs(r2)}) = 0$`,
+                    `得 $x ${r1 >= 0 ? '-' : '+'}${Math.abs(r1)} = 0$ 或 $x ${r2 >= 0 ? '-' : '+'}${Math.abs(r2)} = 0$`,
+                    `解得 $x = ${r1}$ 或 $x = ${r2}$`
+                ]
+            };
+        }
+        
+        if(type === 'STR_SIMULTANEOUS') {
+            const x = this.rand(1, 3 + levelMod);
+            const y = this.rand(1, 3 + levelMod);
+            const a1 = this.rand(1, 3), b1 = this.rand(1, 3);
+            const a2 = this.rand(1, 3), b2 = this.rand(1, 3);
+            const c1 = a1*x + b1*y;
+            const c2 = a2*x + b2*y;
+            return { 
+                q: `解聯立方程：\\begin{cases} ${a1}x ${b1 >= 0 ? '+' : ''}${b1}y = ${c1} \\\\ ${a2}x ${b2 >= 0 ? '+' : ''}${b2}y = ${c2} \\end{cases}`, 
+                a: `$x = ${x}, y = ${y}$`, 
+                o: [`$x = ${x}, y = ${y}$`, `$x = ${x+1}, y = ${y}$`, `$x = ${x}, y = ${y+1}$`, `$x = ${x-1}, y = ${y-1}$`], 
+                s: [`方法一：代入法`, `從第一式得 $x = (${c1} - ${b1}y)/${a1}$`, `代入第二式解 $y$`, `方法二：消元法`, `兩式相消求解`] 
+            };
+        }
+        
+if(type === 'STR_INDEX_LAWS') {
+    const levelMod = Math.min(5, Math.floor(lv / 2));  // 依等級調整難度
+    const vars = ['x', 'y'];  // DSE 常見變數
+    const m = this.rand(1, 3 + levelMod);  // 正指數範圍
+    const n = this.rand(1, 3 + levelMod);  // 正指數範圍
+    const k = this.rand(2, 4 + levelMod);  // 冪次
+    
+    // 隨機選擇題型（DSE 常見：負指數冪次、乘除組合）
+    const lawType = this.rand(1, 3);  // 1: 負冪次, 2: 負乘法, 3: 負除法
+    let q, a, o, s;
+    
+    if(lawType === 1) {  // 負冪次: (x^{-m} y^{-n})^k
+        const exp_x = m * k;
+        const exp_y = n * k;
+        q = `簡化 $(${vars[0]}^{-${m}} ${vars[1]}^{-${n}})^{${k}}$ 以正指數表示。`;
+        a = `$\\frac{1}{${vars[0]}^{${exp_x}} ${vars[1]}^{${exp_y}}}$`;
+        o = [
+            a,
+            `$${vars[0]}^{-${exp_x}} ${vars[1]}^{-${exp_y}}$`,
+            `$${vars[0]}^{${m + k}} ${vars[1]}^{${n + k}}$`,
+            `$${vars[0]}^{${exp_x}} ${vars[1]}^{${exp_y}}$`
+        ];
+ s: [
+    `應用冪次定律：$(${vars[0]}^{-${m}})^{${k}} = ${vars[0]}^{-${m} \\times ${k}} = ${vars[0]}^{-${exp_x}}$，同樣地 $(${vars[1]}^{-${n}})^{${k}} = ${vars[1]}^{-${n} \\times ${k}} = ${vars[1]}^{-${exp_y}}$。`,
+    `將負指數轉為正指數：$${vars[0]}^{-${exp_x}} ${vars[1]}^{-${exp_y}} = \\frac{1}{${vars[0]}^{${exp_x}} ${vars[1]}^{${exp_y}}}$。`,
+    `答案：$\\frac{1}{${vars[0]}^{${exp_x}} ${vars[1]}^{${exp_y}}}$`
+];
+    } else if(lawType === 2) {  // 負乘法: x^{-m} × y^{n} × x^{k}
+        const exp_x = k - m;  // -m + k
+        const exp_y = n;
+        
+        if(exp_x > 0) {
+            q = `簡化 $${vars[0]}^{-${m}} \\times ${vars[1]}^{${n}} \\times ${vars[0]}^{${k}}$ 以正指數表示。`;
+            a = `$${vars[0]}^{${exp_x}} ${vars[1]}^{${exp_y}}$`;
+            o = [
+                a,
+                `$${vars[0]}^{-${m + k}} ${vars[1]}^{${n}}$`,
+                `$${vars[0]}^{${m * k}} ${vars[1]}^{${n}}$`,
+                `$\\frac{${vars[1]}^{${n}}}{${vars[0]}^{${m + k}}}$`
+            ];
+        } else if(exp_x < 0) {
+            const abs_exp_x = Math.abs(exp_x);
+            q = `簡化 $${vars[0]}^{-${m}} \\times ${vars[1]}^{${n}} \\times ${vars[0]}^{${k}}$ 以正指數表示。`;
+            a = `$\\frac{${vars[1]}^{${exp_y}}}{${vars[0]}^{${abs_exp_x}}}$`;
+            o = [
+                a,
+                `$${vars[0]}^{-${m + k}} ${vars[1]}^{${n}}$`,
+                `$${vars[0]}^{${m * k}} ${vars[1]}^{${n}}$`,
+                `$${vars[0]}^{${abs_exp_x}} ${vars[1]}^{${exp_y}}$`
+            ];
+        } else { // exp_x === 0
+            q = `簡化 $${vars[0]}^{-${m}} \\times ${vars[1]}^{${n}} \\times ${vars[0]}^{${k}}$ 以正指數表示。`;
+            a = `$${vars[1]}^{${exp_y}}$`;
+            o = [
+                a,
+                `$${vars[0]}^{-${m + k}} ${vars[1]}^{${n}}$`,
+                `$${vars[0]}^{${m * k}} ${vars[1]}^{${n}}$`,
+                `$\\frac{1}{${vars[0]}^{${m}} ${vars[1]}^{${n}} ${vars[0]}^{${k}}}$`
+            ];
+        }
+        
+        s = [
+            `合併同底數項：$${vars[0]}^{-${m}} \\times ${vars[0]}^{${k}} = ${vars[0]}^{-${m} + ${k}} = ${vars[0]}^{${exp_x}}$。`,
+            `因此原式變為：$${vars[0]}^{${exp_x}} ${vars[1]}^{${n}}$。`,
+            exp_x < 0 ? 
+                `將負指數轉為正指數：$${vars[0]}^{${exp_x}} = \\frac{1}{${vars[0]}^{${Math.abs(exp_x)}}}$，所以答案為 $\\frac{${vars[1]}^{${n}}}{${vars[0]}^{${Math.abs(exp_x)}}}$。` :
+                `答案：${a}`
+        ];
+    } else {  // 負除法: x^{-m} ÷ y^{-n}
+        q = `簡化 $${vars[0]}^{-${m}} \\div ${vars[1]}^{-${n}}$ 以正指數表示。`;
+        a = `$\\frac{${vars[1]}^{${n}}}{${vars[0]}^{${m}}}$`;
+        o = [
+            a,
+            `$${vars[0]}^{-${m}} ${vars[1]}^{-${n}}$`,
+            `$${vars[0]}^{${m}} ${vars[1]}^{${n}}$`,
+            `$\\frac{1}{${vars[0]}^{${m}} ${vars[1]}^{${n}}}$`
+        ];
+        s = [
+            `除法定律：$${vars[0]}^{-${m}} \\div ${vars[1]}^{-${n}} = ${vars[0]}^{-${m}} \\times ${vars[1]}^{${n}}$。`,
+            `將負指數轉為正指數：$${vars[0]}^{-${m}} = \\frac{1}{${vars[0]}^{${m}}}$。`,
+            `所以答案為 $\\frac{${vars[1]}^{${n}}}{${vars[0]}^{${m}}}$。`
+        ];
+    }
+    
+    return { q: q, a: a, o: o, s: s };
+}
+        
+        if(type === 'STR_FACTORIZATION') {
+            const factor = this.rand(2, 4);
+            const innerA = this.rand(1, 3);
+            const innerB = this.rand(-3, 3);
+            const expression = `$${factor}${innerA > 1 ? innerA : ''}x ${innerB >= 0 ? '+' : ''}${innerB * factor}$`;
+            const factored = `$${factor}(${innerA > 1 ? innerA : ''}x ${innerB >= 0 ? '+' : ''}${innerB})$`;
+            return { 
+                q: `因式分解：${expression}`, 
+                a: factored, 
+                o: [factored, `$(${factor}x)(${innerA}x ${innerB >= 0 ? '+' : ''}${innerB})$`, `$x(${factor*innerA}x ${innerB >= 0 ? '+' : ''}${innerB*factor})$`, `無法分解`], 
+                s: [`提取公因式 $${factor}$`, `原式 = $${factor} \\times ${innerA > 1 ? innerA : ''}x + ${factor} \\times ${innerB}$`, `= $${factor}(${innerA > 1 ? innerA : ''}x ${innerB >= 0 ? '+' : ''}${innerB})$`] 
+            };
+        }
+        
+        if(type === 'STR_FORMULA') {
+            const formulas = [
+                {
+                    name: "牛頓第二定律",
+                    f: "$F = ma$", 
+                    description: "力 = 質量 × 加速度",
+                    given: "F, m", 
+                    find: "a", 
+                    F: this.rand(10, 30), 
+                    m: this.rand(2, 8)
+                },
+                {
+                    name: "運動學公式",
+                    f: "$v = u + at$", 
+                    description: "末速度 = 初速度 + 加速度 × 時間",
+                    given: "u, a, t", 
+                    find: "v", 
+                    u: this.rand(0, 5), 
+                    a: this.rand(1, 4), 
+                    t: this.rand(2, 6)
+                },
+                {
+                    name: "圓面積公式",
+                    f: "$A = \\pi r^2$", 
+                    description: "圓面積 = π × 半徑²",
+                    given: "A", 
+                    find: "r", 
+                    A: this.rand(12, 64)
+                },
+                {
+                    name: "勾股定理",
+                    f: "$a^2 + b^2 = c^2$", 
+                    description: "直角三角形斜邊² = 兩直角邊²之和",
+                    given: "a, b", 
+                    find: "c", 
+                    a: this.rand(3, 6), 
+                    b: this.rand(4, 8)
+                },
+                {
+                    name: "歐姆定律",
+                    f: "$V = IR$", 
+                    description: "電壓 = 電流 × 電阻",
+                    given: "V, R", 
+                    find: "I", 
+                    V: this.rand(12, 24), 
+                    R: this.rand(3, 8)
+                },
+                {
+                    name: "動能公式",
+                    f: "$E_k = \\frac{1}{2}mv^2$", 
+                    description: "動能 = ½ × 質量 × 速度²",
+                    given: "m, v", 
+                    find: "E_k", 
+                    m: this.rand(2, 5), 
+                    v: this.rand(4, 10)
+                },
+                {
+                    name: "密度公式",
+                    f: "$\\rho = \\frac{m}{V}$", 
+                    description: "密度 = 質量 ÷ 體積",
+                    given: "m, ρ", 
+                    find: "V", 
+                    m: this.rand(10, 30), 
+                    ρ: this.rand(2, 5)
+                },
+                {
+                    name: "功的公式",
+                    f: "$W = Fs$", 
+                    description: "功 = 力 × 位移",
+                    given: "F, s", 
+                    find: "W", 
+                    F: this.rand(5, 15), 
+                    s: this.rand(2, 8)
+                }
+            ];
+            
+            const formula = formulas[this.rand(0, formulas.length-1)];
+            
+            let q, a, steps;
+            
+            switch(formula.name) {
+                case "牛頓第二定律":
+                    const acceleration = (formula.F / formula.m).toFixed(1);
+                    q = `根據公式 ${formula.f}（${formula.description}），已知 $F = ${formula.F}$ N，$m = ${formula.m}$ kg，求加速度 $a$`;
+                    a = `$${acceleration}$ m/s²`;
+                    steps = [
+                        `由 $F = ma$ 得 $a = \\frac{F}{m}$`,
+                        `$a = \\frac{${formula.F}}{${formula.m}} = ${acceleration}$ m/s²`
+                    ];
+                    break;
+                    
+                case "運動學公式":
+                    const finalVelocity = formula.u + formula.a * formula.t;
+                    q = `根據公式 ${formula.f}（${formula.description}），已知初速度 $u = ${formula.u}$ m/s，加速度 $a = ${formula.a}$ m/s²，時間 $t = ${formula.t}$ s，求末速度 $v$`;
+                    a = `$${finalVelocity}$ m/s`;
+                    steps = [
+                        `$v = u + at$`,
+                        `$v = ${formula.u} + ${formula.a} \\times ${formula.t}$`,
+                        `$v = ${formula.u} + ${formula.a * formula.t} = ${finalVelocity}$ m/s`
+                    ];
+                    break;
+                    
+                case "圓面積公式":
+                    const radius = Math.sqrt(formula.A / Math.PI).toFixed(2);
+                    q = `根據公式 ${formula.f}（${formula.description}），已知圓面積 $A = ${formula.A}$，求半徑 $r$ (π取3.14)`;
+                    a = `$${radius}$`;
+                    steps = [
+                        `由 $A = \\pi r^2$ 得 $r = \\sqrt{\\frac{A}{\\pi}}$`,
+                        `$r = \\sqrt{\\frac{${formula.A}}{3.14}} ≈ \\sqrt{${(formula.A/3.14).toFixed(2)}} ≈ ${radius}$`
+                    ];
+                    break;
+                    
+                case "勾股定理":
+                    const hypotenuse = Math.sqrt(formula.a**2 + formula.b**2).toFixed(1);
+                    q = `根據公式 ${formula.f}（${formula.description}），已知直角三角形兩直角邊 $a = ${formula.a}$，$b = ${formula.b}$，求斜邊 $c$`;
+                    a = `$${hypotenuse}$`;
+                    steps = [
+                        `$c = \\sqrt{a^2 + b^2}$`,
+                        `$c = \\sqrt{${formula.a}^2 + ${formula.b}^2}$`,
+                        `$c = \\sqrt{${formula.a**2} + ${formula.b**2}} = \\sqrt{${formula.a**2 + formula.b**2}} ≈ ${hypotenuse}$`
+                    ];
+                    break;
+                    
+                case "歐姆定律":
+                    const current = (formula.V / formula.R).toFixed(2);
+                    q = `根據公式 ${formula.f}（${formula.description}），已知電壓 $V = ${formula.V}$ V，電阻 $R = ${formula.R}$ Ω，求電流 $I$`;
+                    a = `$${current}$ A`;
+                    steps = [
+                        `由 $V = IR$ 得 $I = \\frac{V}{R}$`,
+                        `$I = \\frac{${formula.V}}{${formula.R}} = ${current}$ A`
+                    ];
+                    break;
+                    
+                case "動能公式":
+                    const kineticEnergy = (0.5 * formula.m * formula.v**2).toFixed(1);
+                    q = `根據公式 ${formula.f}（${formula.description}），已知質量 $m = ${formula.m}$ kg，速度 $v = ${formula.v}$ m/s，求動能 $E_k$`;
+                    a = `$${kineticEnergy}$ J`;
+                    steps = [
+                        `$E_k = \\frac{1}{2}mv^2$`,
+                        `$E_k = 0.5 \\times ${formula.m} \\times ${formula.v}^2$`,
+                        `$E_k = 0.5 \\times ${formula.m} \\times ${formula.v**2} = ${kineticEnergy}$ J`
+                    ];
+                    break;
+                    
+                case "密度公式":
+                    const volume = (formula.m / formula.ρ).toFixed(2);
+                    q = `根據公式 ${formula.f}（${formula.description}），已知質量 $m = ${formula.m}$ g，密度 $\\rho = ${formula.ρ}$ g/cm³，求體積 $V$`;
+                    a = `$${volume}$ cm³`;
+                    steps = [
+                        `由 $\\rho = \\frac{m}{V}$ 得 $V = \\frac{m}{\\rho}$`,
+                        `$V = \\frac{${formula.m}}{${formula.ρ}} = ${volume}$ cm³`
+                    ];
+                    break;
+                    
+                case "功的公式":
+                    const work = formula.F * formula.s;
+                    q = `根據公式 ${formula.f}（${formula.description}），已知力 $F = ${formula.F}$ N，位移 $s = ${formula.s}$ m，求功 $W$`;
+                    a = `$${work}$ J`;
+                    steps = [
+                        `$W = Fs$`,
+                        `$W = ${formula.F} \\times ${formula.s} = ${work}$ J`
+                    ];
+                    break;
+            }
+
+
+            
+            // 生成錯誤選項
+            const answerNum = parseFloat(a.replace(/[^\d.-]/g, ''));
+            const wrongOptions = [];
+            
+            // 確保錯誤選項不重複且不同於正確答案
+            while(wrongOptions.length < 3) {
+                const wrong = answerNum + (Math.random() > 0.5 ? 1 : -1) * this.rand(1, 3);
+                const wrongFormatted = formula.name.includes("半徑") || formula.name.includes("體積") ? 
+                    `$${wrong.toFixed(2)}$` : `$${wrong}$`;
+                if(wrong !== answerNum && !wrongOptions.includes(wrongFormatted)) {
+                    wrongOptions.push(wrongFormatted);
+                }
+            }
+            
+            return { 
+                q: q, 
+                a: a, 
+                o: [a, ...wrongOptions], 
+                s: steps 
+            };
+        }
+
+if(type === 'STR_EXPONENT') {
+    const base = Generator.rand(2, 4);  // 基數 2~4
+    const exp = Generator.rand(2, 4);   // 指數 2~4
+    const value = Math.pow(base, exp);  // 計算 base^exp
+    return { 
+        q: `解方程：$${base}^x = ${value}$`, 
+        a: `$${exp}$`, 
+        o: [`$${exp}$`, `$${exp+1}$`, `$${exp-1}$`, `$${value}$`], 
+        s: [`$${base}^x = ${value}$`, `x = \\log_{${base}} ${value}`, `= ${exp} (因為 ${base}^{${exp}} = ${value})`] 
+    };
+}
+
+if(type === 'STR_EXPONENT_LAWS') {
+    const a = this.rand(2, 5 + levelMod);  // 基數 2~ (5 + 等級調整)
+    const m = this.rand(2, 4 + levelMod);   // 指數 m
+    const n = this.rand(2, 4 + levelMod);   // 指數 n
+    
+    // 隨機選擇定律類型：乘法、除法或冪次
+    const lawType = this.rand(1, 3);
+    let q, a_str, o, s;
+    
+    if(lawType === 1) {  // 乘法定律: a^m * a^n = a^{m+n}
+        const value = Math.pow(a, m) * Math.pow(a, n);
+        const exp_sum = m + n;
+        q = `簡化 $${a}^{${m}} \\times ${a}^{${n}}$`;
+        a_str = `$${a}^{${exp_sum}}$`;
+        o = [`$${a}^{${exp_sum}}$`, `$${a}^{${m * n}}$`, `$${Math.pow(a, exp_sum)}$`, `$${a}^{${m - n}}$`];
+        s = [`指數乘法定律：$${a}^{m} \\times ${a}^{n} = ${a}^{m+n}$`, `m + n = ${exp_sum}`, `答案：$${a}^{${exp_sum}}$`];
+    } else if(lawType === 2) {  // 除法定律: a^m / a^n = a^{m-n}
+        const exp_diff = m - n;
+        q = `簡化 $${a}^{${m}} / ${a}^{${n}}$`;
+        a_str = `$${a}^{${exp_diff}}$`;
+        o = [`$${a}^{${exp_diff}}$`, `$${a}^{${m + n}}$`, `$${a}^{${m * n}}$`, `$${a}^{${n - m}}$`];
+        s = [`指數除法定律：$${a}^{m} / ${a}^{n} = ${a}^{m-n}$`, `m - n = ${exp_diff}`, `答案：$${a}^{${exp_diff}}$`];
+    } else {  // 冪次定律: (a^m)^n = a^{m*n}
+        const exp_prod = m * n;
+        q = `簡化 $(${a}^{${m}})^{${n}}$`;
+        a_str = `$${a}^{${exp_prod}}$`;
+        o = [`$${a}^{${exp_prod}}$`, `$${a}^{${m + n}}$`, `$${Math.pow(a, exp_prod)}$`, `$${a}^{${m - n}}$`];
+        s = [`指數冪次定律：$$(${a}^{m})^{n} = ${a}^{m \times n}$$`, `$m \times n$ = ${exp_prod}`, `答案：$${a}^{${exp_prod}}$`];
+    }
+    
+    return { q: q, a: a_str, o: o, s: s };
+}
+        
+        return this.generateSTR('STR_LINEAR', lv);
+    },
+
+
+    
+    // INT 題目生成器 (智力挑戰)
+    generateINT(type, lv = 1) {
+        const levelMod = Math.min(5, Math.floor(lv / 2));
+        
+        if(type === 'INT_COMBINATORICS') {
+            const n = this.rand(3, 6 + levelMod);
+            const r = this.rand(2, Math.min(4, n-1));
+            const combination = this.combination(n, r);
+            const permutation = this.permutation(n, r);
+            
+            const questions = [
+                {
+                    q: `從 ${n} 人中選 ${r} 人組成委員會，有多少種選法？`,
+                    a: `$${combination}$`,
+                    o: [`$${combination}$`, `$${permutation}$`, `$${n * r}$`, `$${n + r}$`],
+                    s: [`組合數公式：$C_{${n}}^{${r}} = \\frac{${n}!}{${r}!(${n}-${r})!} = ${combination}$`]
+                },
+                {
+                    q: `從 ${n} 本書中選 ${r} 本排列在書架上，有多少種排列方法？`,
+                    a: `$${permutation}$`,
+                    o: [`$${permutation}$`, `$${combination}$`, `$${n * r}$`, `$${n^r}$`],
+                    s: [`排列數公式：$P_{${n}}^{${r}} = \\frac{${n}!}{(${n}-${r})!} = ${permutation}$`]
+                }
+            ];
+            
+            return questions[this.rand(0, questions.length-1)];
+        }
+        
+        if(type === 'INT_LOGIC') {
+            const logicProblems = [
+                {
+                    q: "若所有貓都會爬樹，花花是貓，則：",
+                    a: "花花會爬樹",
+                    o: ["花花會爬樹", "花花不會爬樹", "花花可能是狗", "無法判斷"],
+                    s: ["這是三段論推理：", "大前提：所有貓都會爬樹", "小前提：花花是貓", "結論：花花會爬樹"]
+                },
+                {
+                    q: "如果今天下雨，我就不出門。我出門了，所以：",
+                    a: "今天沒下雨",
+                    o: ["今天沒下雨", "今天下雨", "可能下雨可能不下", "無法判斷"],
+                    s: ["這是逆否命題：", "原命題：如果下雨→不出門", "等價於：如果出門→沒下雨"]
+                },
+                {
+                    q: "所有鳥類都會飛，企鵝是鳥類，所以：",
+                    a: "企鵝不一定會飛",
+                    o: ["企鵝會飛", "企鵝不會飛", "企鵝不一定會飛", "企鵝是哺乳動物"],
+                    s: ["第一個前提是錯的：不是所有鳥類都會飛", "企鵝是鳥類但不會飛", "所以結論是：企鵝不一定會飛"]
+                }
+            ];
+            
+            return logicProblems[this.rand(0, logicProblems.length-1)];
+        }
+        
+        if(type === 'INT_PATTERN') {
+            const patterns = [
+                {
+                    seq: [2, 4, 6, 8, 10],
+                    next: 12,
+                    rule: "加2"
+                },
+                {
+                    seq: [1, 3, 6, 10, 15],
+                    next: 21,
+                    rule: "加遞增的數：+2, +3, +4, +5, +6"
+                },
+                {
+                    seq: [1, 1, 2, 3, 5],
+                    next: 8,
+                    rule: "斐波那契數列：前兩項之和"
+                },
+                {
+                    seq: [3, 9, 27, 81],
+                    next: 243,
+                    rule: "乘以3"
+                },
+                {
+                    seq: [2, 5, 10, 17, 26],
+                    next: 37,
+                    rule: "加遞增的奇數：+3, +5, +7, +9, +11"
+                },
+                {
+                    seq: [1, 4, 9, 16, 25],
+                    next: 36,
+                    rule: "平方數：1², 2², 3², 4², 5², 6²"
+                }
+            ];
+            
+            const pattern = patterns[this.rand(0, patterns.length-1)];
+            return {
+                q: `找出規律：${pattern.seq.join(', ')}，下一個數是？`,
+                a: `$${pattern.next}$`,
+                o: [`$${pattern.next}$`, `$${pattern.next+1}$`, `$${pattern.next-1}$`, `$${pattern.seq[pattern.seq.length-1] * 2}$`],
+                s: [`規律：${pattern.rule}`, `下一個數 = ${pattern.next}`]
+            };
+        }
+        
+        if(type === 'INT_PROBLEM') {
+            const problems = [
+                {
+                    q: "一個數加上5等於12，這個數是多少？",
+                    a: "$7$",
+                    o: ["$7$", "$17$", "$-7$", "$5$"],
+                    s: ["設這個數為x", "$x + 5 = 12$", "$x = 12 - 5 = 7$"]
+                },
+                {
+                    q: "小明有10元，買了3元的筆後還剩多少？",
+                    a: "$7$元",
+                    o: ["$7$元", "$13$元", "$3$元", "$10$元"],
+                    s: ["剩餘 = 原有 - 花費", "$10 - 3 = 7$元"]
+                },
+                {
+                    q: "一箱蘋果有24個，分給6個人，每人得幾個？",
+                    a: "$4$個",
+                    o: ["$4$個", "$6$個", "$24$個", "$18$個"],
+                    s: ["每人得 = 總數 ÷ 人數", "$24 ÷ 6 = 4$個"]
+                }
+            ];
+            
+            return problems[this.rand(0, problems.length-1)];
+        }
+        
+        if(type === 'INT_ANALYSIS') {
+            const problems = [
+                {
+                    q: "$f(x) = 2x + 3$，求 $f(4)$",
+                    a: "$11$",
+                    o: ["$11$", "$14$", "$5$", "$8$"],
+                    s: ["$f(4) = 2 \\times 4 + 3$", "$= 8 + 3 = 11$"]
+                },
+                {
+                    q: "如果 $g(x) = x^2 - 1$，求 $g(3)$",
+                    a: "$8$",
+                    o: ["$8$", "$9$", "$6$", "$10$"],
+                    s: ["$g(3) = 3^2 - 1$", "$= 9 - 1 = 8$"]
+                },
+                {
+                    q: "$h(x) = 3x^2 - 2x + 1$，求 $h(2)$",
+                    a: "$9$",
+                    o: ["$9$", "$5$", "$7$", "$11$"],
+                    s: ["$h(2) = 3(2)^2 - 2(2) + 1$", "$= 3 \\times 4 - 4 + 1$", "$= 12 - 4 + 1 = 9$"]
+                }
+            ];
+            
+            return problems[this.rand(0, problems.length-1)];
+        }
+        
+        if(type === 'INT_SERIES') {
+            const seriesTypes = [
+                {
+                    name: "等差數列",
+                    first: this.rand(2, 5),
+                    diff: this.rand(2, 4),
+                    n: this.rand(5, 8),
+                    getSum: function() {
+                        return this.n * (2*this.first + (this.n-1)*this.diff) / 2;
+                    },
+                    getNth: function(n) {
+                        return this.first + (n-1)*this.diff;
+                    }
+                },
+                {
+                    name: "等比數列",
+                    first: this.rand(2, 4),
+                    ratio: this.rand(2, 3),
+                    n: this.rand(4, 6),
+                    getSum: function() {
+                        return this.first * (Math.pow(this.ratio, this.n) - 1) / (this.ratio - 1);
+                    },
+                    getNth: function(n) {
+                        return this.first * Math.pow(this.ratio, n-1);
+                    }
+                }
+            ];
+            
+            const series = seriesTypes[this.rand(0, seriesTypes.length-1)];
+            const isSumQuestion = Math.random() > 0.5;
+            
+            if(isSumQuestion) {
+                const sum = series.getSum();
+                return {
+                    q: `${series.name}，首項 $a_1 = ${series.first}$，${series.name === '等差數列' ? '公差' : '公比'} $${series.name === '等差數列' ? 'd' : 'r'} = ${series.diff}$，求前 ${series.n} 項和 $S_{${series.n}}$`,
+                    a: `$${Math.round(sum)}$`,
+                    o: [`$${Math.round(sum)}$`, `$${Math.round(sum)+10}$`, `$${series.first*series.n}$`, `$${series.n*(series.first+series.diff)}$`],
+                    s: series.name === '等差數列' ? [
+                        `等差數列求和公式：$S_n = \\frac{n(a_1 + a_n)}{2}$`,
+                        `先求 $a_{${series.n}} = a_1 + (n-1)d = ${series.first} + (${series.n}-1) \\times ${series.diff} = ${series.getNth(series.n)}$`,
+                        `$S_{${series.n}} = \\frac{${series.n} \\times (${series.first} + ${series.getNth(series.n)})}{2} = ${sum}$`
+                    ] : [
+                        `等比數列求和公式：$S_n = \\frac{a_1(1 - r^n)}{1 - r}$`,
+                        `$S_{${series.n}} = \\frac{${series.first} \\times (1 - ${series.diff}^{${series.n}})}{1 - ${series.diff}}$`,
+                        `$= \\frac{${series.first} \\times (1 - ${Math.pow(series.diff, series.n)})}{${1-series.diff}} = ${sum}$`
+                    ]
+                };
+            } else {
+                const nth = this.rand(3, series.n);
+                const nthValue = series.getNth(nth);
+                return {
+                    q: `${series.name}，首項 $a_1 = ${series.first}$，${series.name === '等差數列' ? '公差' : '公比'} $${series.name === '等差數列' ? 'd' : 'r'} = ${series.diff}$，求第 ${nth} 項 $a_{${nth}}$`,
+                    a: `$${nthValue}$`,
+                    o: [`$${nthValue}$`, `$${nthValue+series.diff}$`, `$${series.first*nth}$`, `$${series.first+series.diff*(nth-1)}$`],
+                    s: series.name === '等差數列' ? [
+                        `等差數列通項公式：$a_n = a_1 + (n-1)d$`,
+                        `$a_{${nth}} = ${series.first} + (${nth}-1) \\times ${series.diff}$`,
+                        `$= ${series.first} + ${(nth-1)*series.diff} = ${nthValue}$`
+                    ] : [
+                        `等比數列通項公式：$a_n = a_1 \\times r^{n-1}$`,
+                        `$a_{${nth}} = ${series.first} \\times ${series.diff}^{${nth}-1}$`,
+                        `$= ${series.first} \\times ${Math.pow(series.diff, nth-1)} = ${nthValue}$`
+                    ]
+                };
+            }
+        }
+        
+        return this.generateINT('INT_PROBLEM', lv);
+    },
+    
+    // WIS 題目生成器 (幾何智慧)
+    generateWIS(type, lv = 1) {
+        const levelMod = Math.min(5, Math.floor(lv / 2));
+        
+        if(type === 'WIS_GEOMETRY') {
+            const shapes = [
+                { name: '三角形', type: 'area' },
+                { name: '矩形', type: 'area' },
+                { name: '梯形', type: 'area' },
+                { name: '平行四邊形', type: 'area' },
+                { name: '菱形', type: 'area' },
+                { name: '圓形', type: 'area' },
+                { name: '三角形', type: 'perimeter' },
+                { name: '矩形', type: 'perimeter' }
+            ];
+            const shapeData = shapes[this.rand(0, shapes.length-1)];
+            
+            if(shapeData.name === '三角形' && shapeData.type === 'area') {
+                const b = this.rand(4, 8 + levelMod), h = this.rand(3, 6 + levelMod);
+                const area = (b * h) / 2;
+                return { 
+                    q: `三角形底 $${b}$ cm，高 $${h}$ cm，求面積`, 
+                    a: `$${area}$ cm²`, 
+                    o: [`$${area}$ cm²`, `$${b*h}$ cm²`, `$${b+h}$ cm²`, `$${b*h*2}$ cm²`], 
+                    s: [`三角形面積 = (底 × 高) ÷ 2`, `= (${b} × ${h}) ÷ 2 = ${area}`] 
+                };
+            } else if(shapeData.name === '矩形' && shapeData.type === 'area') {
+                const l = this.rand(5, 10 + levelMod), w = this.rand(3, 8 + levelMod);
+                const area = l * w;
+                return { 
+                    q: `矩形長 $${l}$ cm，闊 $${w}$ cm，求面積`, 
+                    a: `$${area}$ cm²`, 
+                    o: [`$${area}$ cm²`, `$${l+w}$ cm²`, `$${2*(l+w)}$ cm²`, `$${l*w*2}$ cm²`], 
+                    s: [`矩形面積 = 長 × 闊`, `= ${l} × ${w} = ${area}`] 
+                };
+            } else if(shapeData.name === '梯形') {
+                const a = this.rand(3, 6), b = this.rand(7, 12), h = this.rand(4, 8);
+                const area = ((a + b) * h) / 2;
+                return { 
+                    q: `梯形上底 $${a}$ cm，下底 $${b}$ cm，高 $${h}$ cm，求面積`, 
+                    a: `$${area}$ cm²`, 
+                    o: [`$${area}$ cm²`, `$${a+b+h}$ cm²`, `$${(a+b)*h}$ cm²`, `$${a*b*h}$ cm²`], 
+                    s: [`梯形面積 = (上底 + 下底) × 高 ÷ 2`, `= (${a} + ${b}) × ${h} ÷ 2 = ${area}`] 
+                };
+            } else if(shapeData.name === '平行四邊形') {
+                const b = this.rand(4, 8), h = this.rand(3, 7);
+                const area = b * h;
+                return { 
+                    q: `平行四邊形底 $${b}$ cm，高 $${h}$ cm，求面積`, 
+                    a: `$${area}$ cm²`, 
+                    o: [`$${area}$ cm²`, `$${b+h}$ cm²`, `$${b*h/2}$ cm²`, `$${b*h*2}$ cm²`], 
+                    s: [`平行四邊形面積 = 底 × 高`, `= ${b} × ${h} = ${area}`] 
+                };
+            } else if(shapeData.name === '菱形') {
+                const d1 = this.rand(4, 10 + levelMod);
+                const d2 = this.rand(3, 8 + levelMod);
+                const area = (d1 * d2) / 2;
+                return { 
+                    q: `菱形對角線長 $${d1}$ cm 和 $${d2}$ cm，求面積`, 
+                    a: `$${area}$ cm²`, 
+                    o: [`$${area}$ cm²`, `$${d1*d2}$ cm²`, `$${d1+d2}$ cm²`, `$${2*(d1+d2)}$ cm²`], 
+                    s: [`菱形面積 = (對角線1 × 對角線2) ÷ 2`, `= (${d1} × ${d2}) ÷ 2 = ${area}`] 
+                };
+            } else if(shapeData.name === '圓形') {
+                const r = this.rand(3, 7 + levelMod);
+                const area = Math.PI * r * r;
+                return { 
+                    q: `圓半徑 $${r}$ cm，求面積 (π≈3.14)`, 
+                    a: `$${(area).toFixed(1)}$ cm²`, 
+                    o: [`$${(area).toFixed(1)}$ cm²`, `$${(2*Math.PI*r).toFixed(1)}$ cm²`, `$${r*r}$ cm²`, `$${(r*2).toFixed(1)}$ cm²`], 
+                    s: [`圓面積 = πr²`, `= 3.14 × ${r}²`, `= 3.14 × ${r*r} = ${area.toFixed(1)}`] 
+                };
+            } else if(shapeData.name === '三角形' && shapeData.type === 'perimeter') {
+                const a = this.rand(3, 8), b = this.rand(4, 9), c = this.rand(5, 10);
+                const perimeter = a + b + c;
+                return { 
+                    q: `三角形三邊長 $${a}$ cm, $${b}$ cm, $${c}$ cm，求周長`, 
+                    a: `$${perimeter}$ cm`, 
+                    o: [`$${perimeter}$ cm`, `$${a*b*c}$ cm`, `$${(a+b+c)/2}$ cm`, `$${a+b}$ cm`], 
+                    s: [`三角形周長 = 三邊之和`, `= ${a} + ${b} + ${c} = ${perimeter}`] 
+                };
+            } else if(shapeData.name === '矩形' && shapeData.type === 'perimeter') {
+                const l = this.rand(4, 10), w = this.rand(3, 8);
+                const perimeter = 2 * (l + w);
+                return { 
+                    q: `矩形長 $${l}$ cm，闊 $${w}$ cm，求周長`, 
+                    a: `$${perimeter}$ cm`, 
+                    o: [`$${perimeter}$ cm`, `$${l*w}$ cm`, `$${l+w}$ cm`, `$${l*w*2}$ cm`], 
+                    s: [`矩形周長 = 2 × (長 + 闊)`, `= 2 × (${l} + ${w}) = ${perimeter}`] 
+                };
+            }
+        }
+        
+        if(type === 'WIS_TRIG') {
+            const angles = [
+                { angle: 30, sin: "1/2", cos: "√3/2", tan: "√3/3" },
+                { angle: 45, sin: "√2/2", cos: "√2/2", tan: "1" },
+                { angle: 60, sin: "√3/2", cos: "1/2", tan: "√3" }
+            ];
+            const trigFuncs = ["sin", "cos", "tan"];
+            const angleData = angles[this.rand(0, angles.length-1)];
+            const func = trigFuncs[this.rand(0, trigFuncs.length-1)];
+            
+            let answer, wrong1, wrong2, wrong3;
+            if(func === "sin") {
+                answer = angleData.sin;
+                wrong1 = angleData.cos;
+                wrong2 = angleData.tan;
+                wrong3 = func === "sin" && angleData.angle === 30 ? "√3/2" : "1/2";
+            } else if(func === "cos") {
+                answer = angleData.cos;
+                wrong1 = angleData.sin;
+                wrong2 = angleData.tan;
+                wrong3 = func === "cos" && angleData.angle === 60 ? "√3/2" : "1/2";
+            } else {
+                answer = angleData.tan;
+                wrong1 = angleData.sin;
+                wrong2 = angleData.cos;
+                wrong3 = func === "tan" && angleData.angle === 45 ? "√3" : "1";
+            }
+            
+            return { 
+                q: `求 $${func} ${angleData.angle}^\\circ$ 的值`, 
+                a: `$${answer}$`, 
+                o: [`$${answer}$`, `$${wrong1}$`, `$${wrong2}$`, `$${wrong3}$`], 
+                s: [`特殊角三角比：`, 
+                    `$\\sin 30^\\circ = 1/2$, $\\cos 30^\\circ = √3/2$, $\\tan 30^\\circ = √3/3$`,
+                    `$\\sin 45^\\circ = √2/2$, $\\cos 45^\\circ = √2/2$, $\\tan 45^\\circ = 1$`,
+                    `$\\sin 60^\\circ = √3/2$, $\\cos 60^\\circ = 1/2$, $\\tan 60^\\circ = √3$`] 
+            };
+        }
+        
+        if(type === 'WIS_CIRCLE') {
+            const r = this.rand(3, 8 + levelMod);
+            const choice = this.rand(0,2);
+            if(choice === 0) {
+                return { 
+                    q: `半徑為 $${r}$ 的圓面積？ (取 $\\pi$)`, 
+                    a: `$${r*r}\\pi$`, 
+                    o: [`$${r*r}\\pi$`, `$${2*r}\\pi$`, `$${r}\\pi$`, `$${r*r*r}\\pi$`], 
+                    s: [`圓面積公式：$\\pi r^2$`, `= $\\pi \\times ${r}^2 = ${r*r}\\pi$`] 
+                };
+            } else if(choice === 1) {
+                return { 
+                    q: `直徑為 $${2*r}$ 的圓周長？ (取 $\\pi$)`, 
+                    a: `$${2*r}\\pi$`, 
+                    o: [`$${2*r}\\pi$`, `$${r*r}\\pi$`, `$${r}\\pi$`, `$${4*r}\\pi$`], 
+                    s: [`圓周長公式：$\\pi d$ (d為直徑)`, `= $\\pi \\times ${2*r} = ${2*r}\\pi$`] 
+                };
+            } else {
+                const sectorAngle = this.rand(30, 150);
+                const sectorArea = (sectorAngle / 360) * Math.PI * r * r;
+                return { 
+                    q: `半徑 $${r}$，圓心角 $${sectorAngle}^\\circ$ 的扇形面積？ (取 π)`, 
+                    a: `$${(sectorAngle/360 * r*r).toFixed(2)}\\pi$`, 
+                    o: [`$${(sectorAngle/360 * r*r).toFixed(2)}\\pi$`, `$${r*r}\\pi$`, `$${(sectorAngle/180 * r*r).toFixed(2)}\\pi$`, `$${2*r}\\pi$`], 
+                    s: [`扇形面積 = (圓心角/360) × 圓面積`, `= (${sectorAngle}/360) × ${r*r}π`, `= ${(sectorAngle/360 * r*r).toFixed(2)}π`] 
+                };
+            }
+        }
+        
+        if(type === 'WIS_COORDINATE') {
+            const x1 = this.rand(-5, 5), y1 = this.rand(-5, 5);
+            const x2 = this.rand(-5, 5), y2 = this.rand(-5, 5);
+            const dist = Math.round(Math.sqrt((x2-x1)**2 + (y2-y1)**2) * 10) / 10;
+            return { 
+                q: `求點 A(${x1},${y1}) 和 B(${x2},${y2}) 之間的距離`, 
+                a: `$${dist}$`, 
+                o: [`$${dist}$`, `$${Math.abs(x2-x1)+Math.abs(y2-y1)}$`, `$${Math.abs(x2-x1)}$`, `$${Math.abs(y2-y1)}$`], 
+                s: [`距離公式：$\\sqrt{(x_2-x_1)^2 + (y_2-y_1)^2}$`, `= $\\sqrt{(${x2}-${x1})^2 + (${y2}-${y1})^2}$`, `= $\\sqrt{${(x2-x1)**2} + ${(y2-y1)**2}}$`, `= $\\sqrt{${(x2-x1)**2 + (y2-y1)**2}} ≈ ${dist}$`] 
+            };
+        }
+        
+        if(type === 'WIS_VOLUME') {
+            const shapes = ['立方體', '長方體', '圓柱體'];
+            const shape = shapes[this.rand(0, shapes.length-1)];
+            
+            if(shape === '立方體') {
+                const s = this.rand(2, 5 + levelMod);
+                const vol = s * s * s;
+                return { 
+                    q: `立方體邊長 $${s}$ cm，求體積`, 
+                    a: `$${vol}$ cm³`, 
+                    o: [`$${vol}$ cm³`, `$${s*s}$ cm³`, `$${6*s*s}$ cm³`, `$${s*12}$ cm³`], 
+                    s: [`立方體體積 = 邊長³`, `= ${s} × ${s} × ${s} = ${vol}`] 
+                };
+            } else if(shape === '長方體') {
+                const l = this.rand(3, 6), w = this.rand(2, 5), h = this.rand(4, 8);
+                const vol = l * w * h;
+                return { 
+                    q: `長方體長 $${l}$ cm，闊 $${w}$ cm，高 $${h}$ cm，求體積`, 
+                    a: `$${vol}$ cm³`, 
+                    o: [`$${vol}$ cm³`, `$${l+w+h}$ cm³`, `$${2*(l*w + l*h + w*h)}$ cm³`, `$${l*w}$ cm³`], 
+                    s: [`長方體體積 = 長 × 闊 × 高`, `= ${l} × ${w} × ${h} = ${vol}`] 
+                };
+            } else {
+                const r = this.rand(2, 4 + levelMod), h = this.rand(3, 7 + levelMod);
+                const vol = Math.PI * r * r * h;
+                return { 
+                    q: `圓柱體半徑 $${r}$ cm，高 $${h}$ cm，求體積 (取 π)`, 
+                    a: `$${r*r*h}\\pi$ cm³`, 
+                    o: [`$${r*r*h}\\pi$ cm³`, `$${2*r*h}\\pi$ cm³`, `$${r*h}\\pi$ cm³`, `$${r*r}\\pi$ cm³`], 
+                    s: [`圓柱體積 = πr²h`, `= π × ${r}² × ${h} = ${r*r*h}π`] 
+                };
+            }
+        }
+        
+        if(type === 'WIS_ANGLE') {
+            const angle1 = this.rand(30, 80), angle2 = this.rand(30, 80);
+            const angle3 = 180 - angle1 - angle2;
+            return { 
+                q: `三角形兩內角為 $${angle1}^\\circ$ 和 $${angle2}^\\circ$，求第三角`, 
+                a: `$${angle3}^\\circ$`, 
+                o: [`$${angle3}^\\circ$`, `$${180-angle1}^\\circ$`, `$${180-angle2}^\\circ$`, `$${angle1+angle2}^\\circ$`], 
+                s: [`三角形內角和 = 180°`, `第三角 = 180° - ${angle1}° - ${angle2}° = ${angle3}°`] 
+            };
+        }
+        
+        return this.generateWIS('WIS_GEOMETRY', lv);
+    },
+    
+    // 擴充：變數與圓方程
+    generateEXT(type, lv = 7) {
         const mod = lv - 7;
-        if(type === 'STR') {
-            const a = this.rand(2, 5+mod), x = this.rand(-10, 10), c = a * x;
-            return { q: `解方程：$${a}x = ${c}$`, a: `$${x}$`, o: [ `$${x}$`, `$${-x}$`, `$${x+1}$`, `$0$` ], s: [`除法運算：$x = ${c} / ${a} = ${x}$`] };
+
+        // 變數 (Variation) - 正變與反變綜合
+        if (type === 'EXT_VAR') {
+            const k = this.rand(2, 5);
+            const x = this.rand(2, 4);
+            const y = this.rand(2, 6);
+            // 題目類型：y = kx^2 或 y = k/sqrt(x)
+            const isDirect = Math.random() > 0.5;
+            if (isDirect) {
+                const constant = y / (x * x);
+                const newX = x * 2;
+                const newY = y * 4;
+                return {
+                    q: `已知 $y$ 隨 $x^2$ 正變。當 $x = ${x}$ 時，$y = ${y}$。求當 $x = ${newX}$ 時 $y$ 的值。`,
+                    a: `$${newY}$`,
+                    o: [`$${newY}$`, `$${y * 2}$`, `$${newY + 2}$`, `$${y ** 2}$`],
+                    s: [`設 $y = kx^2$`, `${y} = k(${x})^2 \\Rightarrow k = ${y}/${x**2}$`, `當 $x = ${newX}$，$y = (${y}/${x**2}) \\times ${newX}^2 = ${newY}$`]
+                };
+            } else {
+                const val = y * x;
+                const newX = x * 2;
+                const newY = val / newX;
+                return {
+                    q: `已知 $y$ 隨 $x$ 反變。當 $x = ${x}$ 時，$y = ${y}$。求當 $x = ${newX}$ 時 $y$ 的值。`,
+                    a: `$${newY}$`,
+                    o: [`$${newY}$`, `$${y * 2}$`, `$${y + 2}$`, `$${val}$`],
+                    s: [`設 $y = k/x$`, `${y} = k/${x} \\Rightarrow k = ${x * y}$`, `當 $x = ${newX}$，$y = ${val}/${newX} = ${newY}$`]
+                };
+            }
         }
-        if(type === 'DEX_SD') {
-            const sd = this.rand(3, 8), k = 2;
-            return { q: `已知 SD 為 $${sd}$。若將所有數據乘以 $${k}$，新 SD 為？`, a: `$${sd*k}$`, o: [`$${sd*k}$`, `$${sd}$`, `$${sd+k}$`, `$${sd*sd}$`], s: [`性質：乘法會影響 SD。$${sd} \\times ${k} = ${sd*k}$`] };
+
+        // 圓方程 (Circle Equations) - 一般式求圓心與半徑
+        if (type === 'EXT_CIRCLE') {
+            const h = this.rand(-5, 5);
+            const k = this.rand(-5, 5);
+            const r = this.rand(2, 6);
+            const D = -2 * h;
+            const E = -2 * k;
+            const F = h * h + k * k - r * r;
+            
+            const isAskingCenter = Math.random() > 0.5;
+            if (isAskingCenter) {
+                return {
+                    q: `已知圓方程為 $x^2 + y^2 ${D >= 0 ? '+' : ''}${D}x ${E >= 0 ? '+' : ''}${E}y ${F >= 0 ? '+' : ''}${F} = 0$，求圓心坐標。`,
+                    a: `$(${h}, ${k})$`,
+                    o: [`$(${h}, ${k})$`, `$(${-h}, ${-k})$`, `$(${D}, ${E})$`, `$(0, 0)$`],
+                    s: [`圓心公式：$( -D/2 , -E/2 )$`, `圓心 $= ( -(${D})/2 , -(${E})/2 ) = (${h}, ${k})$`]
+                };
+            } else {
+                return {
+                    q: `已知圓方程為 $x^2 + y^2 ${D >= 0 ? '+' : ''}${D}x ${E >= 0 ? '+' : ''}${E}y ${F >= 0 ? '+' : ''}${F} = 0$，求半徑。`,
+                    a: `$${r}$`,
+                    o: [`$${r}$`, `$${r * r}$`, `$${Math.sqrt(Math.abs(F))}$`, `$${r + 1}$`],
+                    s: [`半徑公式：$r = \\sqrt{(D/2)^2 + (E/2)^2 - F}$`, `$r = \\sqrt{(${-h})^2 + (${-k})^2 - (${F})}$`, `$r = \\sqrt{${h*h + k*k - F}} = ${r}$`]
+                };
+            }
         }
-        if(type === 'GEO') {
-            const r = this.rand(3, 10);
-            return { q: `半徑為 $${r}$ 的圓面積？ (取 $\\pi$)`, a: `$${r*r}\\pi$`, o: [`$${r*r}\\pi$`, `$${2*r}\\pi$`, `$${r}\\pi$`, `$${r*r*r}\\pi$`], s: [`公式：$\\pi r^2 = \\pi (${r})^2 = ${r*r}\\pi$`] };
+        return this.generateEXT('EXT_VAR', lv);
+    },
+    
+    // 輔助函數
+    combination(n, r) {
+        let result = 1;
+        for(let i = 1; i <= r; i++) {
+            result = result * (n - i + 1) / i;
         }
-        return { q: "BOSS 挑戰：機率與三角綜合運用。", a: "1/2", o: ["1/2","1/3","1/4","1"], s: ["BOSS 級題目需要精確計算。"] };
+        return Math.round(result);
+    },
+    
+    permutation(n, r) {
+        let result = 1;
+        for(let i = 0; i < r; i++) {
+            result *= (n - i);
+        }
+        return result;
+    },
+    
+    // 主生成函數
+    safeGen(type, lv = 1) {
+        if(type.startsWith('STR_')) return this.generateSTR(type, lv);
+        if(type.startsWith('INT_')) return this.generateINT(type, lv);
+        if(type.startsWith('WIS_')) return this.generateWIS(type, lv);
+        if(type.startsWith('EXT_')) return this.generateEXT(type, lv);
+        
+        // BOSS題
+        if(type === 'BOSS_TRI') {
+            const angle = this.rand(30, 60);
+            const side = this.rand(5, 12);
+            const answer = Math.round(side / Math.tan(angle * Math.PI/180) * 10) / 10;
+            return { 
+                q: `根據三角函數公式，直角三角形中，一銳角 $${angle}^\\circ$，對邊長 $${side}$，求鄰邊長度`, 
+                a: `$${answer}$`, 
+                o: [`$${answer}$`, `$${answer+2}$`, `$${answer-2}$`, `$${side}$`], 
+                s: [`$\\tan ${angle}^\\circ = \\frac{對邊}{鄰邊}$`, `鄰邊 = $${side} / \\tan ${angle}^\\circ$`, `$\\tan ${angle}^\\circ ≈ ${Math.tan(angle*Math.PI/180).toFixed(3)}$`, `$≈ ${side} / ${Math.tan(angle*Math.PI/180).toFixed(3)} ≈ ${answer}$`] 
+            };
+        }
+        
+        if(type === 'BOSS_PROB') {
+            const prob = (this.rand(1, 3)/6).toFixed(3);
+            return { 
+                q: `根據概率公式，擲兩粒公平骰子，求點數和為 $7$ 的概率`, 
+                a: `$\\frac{1}{6}$`, 
+                o: [`$\\frac{1}{6}$`, `$\\frac{1}{12}$`, `$\\frac{1}{18}$`, `$\\frac{1}{36}$`], 
+                s: [`總可能結果：$6 \\times 6 = 36$`, `點數和為7的組合：(1,6),(2,5),(3,4),(4,3),(5,2),(6,1) 共6種`, `概率 = $\\frac{6}{36} = \\frac{1}{6}$`] 
+            };
+        }
+        
+        return this.generateSTR('STR_LINEAR', lv);
     }
 };
 
 const Core = {
-    p: { name: "", ap: 0, lastDaily: 0 },
+    p: { 
+        name: "", 
+        str: 0, 
+        int: 0, 
+        wis: 0,
+        luc: 0,
+        dex: 0,
+        vit: 0,
+        level: 1,
+        exp: 0
+    },
+    
     init() {
-        if(!localStorage.getItem('dse_v13_priv')) document.getElementById('privacy-notice').style.display = 'block';
+        if(!localStorage.getItem('math_hero_priv')) document.getElementById('privacy-notice').style.display = 'block';
         this.load();
     },
-    acceptPrivacy() { localStorage.setItem('dse_v13_priv', 'true'); document.getElementById('privacy-notice').style.display = 'none'; },
-    handleStart() {
-        const n = document.getElementById('in-name').value;
-        if(!n) return;
-        this.p.name = DOMPurify.sanitize(n);
-        this.save();
-        document.getElementById('view-setup').style.display='none';
-        document.getElementById('view-main').style.display='block';
+    
+    acceptPrivacy() { 
+        localStorage.setItem('math_hero_priv', 'true'); 
+        document.getElementById('privacy-notice').style.display = 'none'; 
     },
-    handleSync(type) {
-        document.getElementById('loading-spinner').style.display = 'block';
-        document.getElementById('q-body').innerHTML = "";
-        document.getElementById('q-options').innerHTML = "";
+    
+
+    
+    showAttributeMenu(attr) {
+        document.getElementById('main-menu').style.display = 'none';
+        document.querySelectorAll('.attribute-menu').forEach(m => m.style.display = 'none');
+        document.getElementById(`menu-${attr}`).style.display = 'block';
+    },
+    
+    backToMain() {
+        document.querySelectorAll('.attribute-menu').forEach(menu => menu.style.display = 'none');
+        document.getElementById('view-errors').style.display = 'none';
+        document.getElementById('main-menu').style.display = 'block';
+    },
+    
+    openErrorLog() {
+        document.getElementById('main-menu').style.display = 'none';
+        document.querySelectorAll('.attribute-menu').forEach(m => m.style.display = 'none');
+        document.getElementById('view-errors').style.display = 'block';
+        this.updateErrorUI();
+    },
+    
+    updateErrorUI() {
+        const list = document.getElementById('error-list');
+        const countSpan = document.getElementById('error-count');
+        countSpan.textContent = Analytics.errors.length;
+        
+        // 更新錯誤統計
+        const stats = Analytics.getErrorStats();
+        document.getElementById('error-str').textContent = stats.str;
+        document.getElementById('error-int').textContent = stats.int;
+        document.getElementById('error-wis').textContent = stats.wis;
+        document.getElementById('error-rate').textContent = stats.errorRate + '%';
+        
+        if (Analytics.errors.length === 0) {
+            list.innerHTML = `
+                <div style="text-align:center; color:#475569; padding:40px 20px; border:2px dashed #334155; border-radius:15px; margin-top:20px;">
+                    <div style="font-size:48px;">📚</div>
+                    <div style="font-size:16px; margin:10px 0; color:var(--text);">錯誤之書是空的</div>
+                    <div style="color:#94a3b8; font-size:14px;">修煉表現完美！</div>
+                    <button onclick="Core.backToMain()" style="background:var(--accent); color:white; border:none; padding:10px 20px; border-radius:10px; margin-top:15px; cursor:pointer;">繼續修煉</button>
+                </div>`;
+            return;
+        }
+
+        list.innerHTML = Analytics.errors.map((err, idx) => {
+            const typeName = err.type.startsWith('STR') ? '力量(STR)' : 
+                            err.type.startsWith('INT') ? '智力(INT)' : 
+                            err.type.startsWith('WIS') ? '智慧(WIS)' : 
+                            err.type.startsWith('EXT') ? '擴展單元' : '其他';
+            
+            const typeColor = err.type.startsWith('STR') ? 'var(--red)' : 
+                             err.type.startsWith('INT') ? 'var(--accent)' : 
+                             err.type.startsWith('WIS') ? 'var(--purple)' : 
+                             err.type.startsWith('EXT') ? 'var(--accent)' : 'var(--gold)';
+            
+            return `
+                <div class="error-item">
+                    <div style="display:flex; justify-content:space-between; align-items:start;">
+                        <div>
+                            <div class="error-type" style="color:${typeColor}">
+                                #${idx+1} | ${typeName} | ${err.time}
+                            </div>
+                            <div class="error-question">${err.q}</div>
+                        </div>
+                    </div>
+                    
+                    <div style="margin:10px 0;">
+                        <details>
+                            <summary style="cursor:pointer; color:var(--accent); font-size:14px; background:rgba(56,189,248,0.1); padding:8px; border-radius:5px;">
+                                📖 顯示答案與詳解
+                            </summary>
+                            <div style="padding:10px; background:rgba(255,255,255,0.05); border-radius:5px; margin-top:5px;">
+                                <div class="error-answer">正確答案：${err.a}</div>
+                                <div style="color:#94a3b8; font-size:12px; margin-top:8px;">
+                                    <strong>解題步驟：</strong><br>
+                                    ${err.s.join('<br>')}
+                                </div>
+                            </div>
+                        </details>
+                    </div>
+                    
+                    <div class="error-actions">
+                        <button onclick="Core.challengeError(${idx})" class="challenge-btn">🔄 重新挑戰</button>
+                        <button onclick="Analytics.removeError(${idx}); Core.updateErrorUI();" class="delete-btn">🗑️ 刪除</button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        // 重新渲染數學公式
         MathJaxLoader.ensure(() => {
-            document.getElementById('loading-spinner').style.display = 'none';
-            const lv = parseInt((document.getElementById('ds-inject').value || "7").replace(/\D/g,'')) || 7;
-            const q = Generator.safeGen(type, lv);
-            document.getElementById('q-body').innerHTML = DOMPurify.sanitize(q.q);
-            document.getElementById('feedback').style.display = 'none';
-            const opts = document.getElementById('q-options');
-            q.o.sort(()=>Math.random()-0.5).forEach(o => {
-                const b = document.createElement('button');
-                b.className = 'opt-btn'; b.textContent = o;
-                b.onclick = () => {
-                    const ok = o === q.a;
-                    Analytics.record(type, ok);
-                    this.showFeedback(ok, q);
-                };
-                opts.appendChild(b);
-            });
-            document.getElementById('modal').style.display = 'flex';
             if(window.MathJax) MathJax.typesetPromise();
         });
     },
-    redeemDaily() {
-        if(Date.now() - this.p.lastDaily < 86400000) return alert("今日已領取！");
-        this.p.ap += 50; this.p.lastDaily = Date.now();
-        this.save(); alert("獲得 50 AP！");
+    
+    challengeError(index) {
+        const errData = Analytics.errors[index];
+        
+        // 開啟答題視窗
+        document.getElementById('modal').style.display = 'flex';
+        document.getElementById('q-body').innerHTML = DOMPurify.sanitize(errData.q);
+        
+        const opts = document.getElementById('q-options');
+        opts.innerHTML = "";
+        document.getElementById('feedback').style.display = 'none';
+        document.getElementById('attribute-gain').style.display = 'none';
+
+        // 生成選項（隨機順序）
+        [...errData.o].sort(() => Math.random() - 0.5).forEach(o => {
+            const b = document.createElement('button');
+            b.className = 'opt-btn';
+            b.innerHTML = o;
+            b.onclick = () => {
+                const ok = o === errData.a;
+                if(ok) {
+                    // 挑戰成功：從數組中移除該錯誤
+                    Analytics.errors.splice(index, 1);
+                    localStorage.setItem('math_hero_errors', JSON.stringify(Analytics.errors));
+                    
+                    // 增加對應屬性
+                    const attr = errData.type.startsWith('STR') ? 'str' : 
+                                errData.type.startsWith('INT') ? 'int' : 
+                                errData.type.startsWith('WIS') ? 'wis' : 
+                                errData.type.startsWith('EXT') ? 'wis' : null;
+                    if(attr) {
+                        this.p[attr] += 20; // 重做成功獎勵更多
+                        this.p.exp += 20;
+                        this.p.level = Math.floor(this.p.exp / 100) + 1;
+                        
+                        // 隨機增加其他屬性
+                        const otherAttrs = ['luc', 'dex', 'vit'];
+                        const randomAttr = otherAttrs[Math.floor(Math.random() * otherAttrs.length)];
+                        this.p[randomAttr] += 5;
+                    }
+                    
+                    this.showFeedback(true, errData);
+                    document.getElementById('res-title').textContent = "✨ 挑戰成功：錯誤已清除！";
+                    document.getElementById('res-title').style.color = 'var(--green)';
+                    
+                    // 顯示屬性增益
+                    if(attr) {
+                        const attrName = attr === 'str' ? '力量(STR)' : 
+                                       attr === 'int' ? '智力(INT)' : 
+                                       attr === 'wis' ? '智慧(WIS)' : attr.toUpperCase();
+                        document.getElementById('gain-text').innerHTML = 
+                            `✅ +20 ${attrName}<br>✨ 其他屬性也有所提升`;
+                        document.getElementById('attribute-gain').style.display = 'block';
+                    }
+                } else {
+                    this.showFeedback(false, errData);
+                    document.getElementById('res-title').textContent = "❌ 挑戰失敗：再接再厲";
+                    document.getElementById('res-title').style.color = 'var(--red)';
+                }
+                
+                this.save();
+                this.updateErrorUI();
+            };
+            opts.appendChild(b);
+        });
+
+        MathJaxLoader.ensure(() => {
+            if(window.MathJax) MathJax.typesetPromise();
+        });
     },
-    showFeedback(ok, q) {
+    
+    handleSync(type) {
+        document.getElementById('modal').style.display = 'flex';
+        document.getElementById('loading-spinner').style.display = 'block';
+        document.getElementById('q-body').innerHTML = "";
         document.getElementById('q-options').innerHTML = "";
-        document.getElementById('feedback').style.display = 'block';
-        const t = document.getElementById('res-title');
-        t.textContent = ok ? "✅ 同步完成" : "❌ 同步失敗";
-        t.style.color = ok ? 'var(--green)' : 'var(--red)';
-        document.getElementById('res-steps').innerHTML = DOMPurify.sanitize(q.s.join('<br>'));
-        if(ok) { this.p.ap += 10; this.save(); }
+        document.getElementById('feedback').style.display = 'none';
+        document.getElementById('attribute-gain').style.display = 'none';
+        
+        MathJaxLoader.ensure(() => {
+            document.getElementById('loading-spinner').style.display = 'none';
+            const q = Generator.safeGen(type, this.p.level);
+            document.getElementById('q-body').innerHTML = DOMPurify.sanitize(q.q);
+            
+            const opts = document.getElementById('q-options');
+            q.o.sort(()=>Math.random()-0.5).forEach(o => {
+                const b = document.createElement('button');
+                b.className = 'opt-btn'; 
+                b.innerHTML = o;
+                b.onclick = () => {
+                    const ok = o === q.a;
+                    Analytics.record(type, ok, q);
+                    
+                    if(ok) {
+                        const attr = type.startsWith('STR') ? 'str' : 
+                                    type.startsWith('INT') ? 'int' : 
+                                    type.startsWith('WIS') ? 'wis' : 
+                                    type.startsWith('EXT') ? 'wis' : null;
+                        
+                        if(attr) {
+                            // 主要屬性增加
+                            this.p[attr] += 10;
+                            this.p.exp += 10;
+                            
+                            // 隨機增加次要屬性
+                            const secondaryAttrs = ['luc', 'dex', 'vit'];
+                            const randomAttr = secondaryAttrs[Math.floor(Math.random() * secondaryAttrs.length)];
+                            this.p[randomAttr] += 3;
+                            
+                            this.p.level = Math.floor(this.p.exp / 100) + 1;
+                            
+                            const attrName = attr === 'str' ? '力量(STR)' : 
+                                           attr === 'int' ? '智力(INT)' : 
+                                           attr === 'wis' ? '智慧(WIS)' : attr.toUpperCase();
+                                           
+                            const secAttrName = randomAttr === 'luc' ? '幸運(LUC)' : 
+                                              randomAttr === 'dex' ? '敏捷(DEX)' : 
+                                              randomAttr === 'vit' ? '體質(VIT)' : randomAttr.toUpperCase();
+                            
+                            document.getElementById('gain-text').innerHTML = 
+                                `✅ +10 ${attrName}<br>✨ +3 ${secAttrName}`;
+                            document.getElementById('attribute-gain').style.display = 'block';
+                        }
+                    }
+                    
+                    this.showFeedback(ok, q);
+                    this.save();
+                };
+                opts.appendChild(b);
+            });
+            
+            if(window.MathJax) MathJax.typesetPromise();
+        });
     },
-    save() { localStorage.setItem('dse_v13_p', JSON.stringify(this.p)); this.updateUI(); },
-    load() {
-        const d = localStorage.getItem('dse_v13_p');
-        if(d) { this.p = JSON.parse(d); document.getElementById('view-setup').style.display='none'; document.getElementById('view-main').style.display='block'; this.updateUI(); }
-    },
-    updateUI() {
-        document.getElementById('ds-name').textContent = this.p.name;
-        document.getElementById('ds-ap').textContent = this.p.ap;
+    
+    showFeedback(ok, q) {
+        const fb = document.getElementById('feedback');
+        fb.style.display = 'block';
+        const resTitle = document.getElementById('res-title');
+        const resSteps = document.getElementById('res-steps');
+        
+        if(ok) {
+            resTitle.textContent = "✅ 回答正確！";
+            resTitle.style.color = 'var(--green)';
+        } else {
+            resTitle.textContent = "❌ 回答錯誤";
+            resTitle.style.color = 'var(--red)';
+        }
+        
+        resSteps.innerHTML = '<strong>解題步驟：</strong><br>' + q.s.join('<br>');
         Analytics.updateUI();
-        document.getElementById('btn-boss-tri').className = `opt-btn boss-btn ${this.p.ap >= 100 ? 'unlocked' : ''}`;
-        document.getElementById('btn-boss-prob').className = `opt-btn boss-btn ${this.p.ap >= 200 ? 'unlocked' : ''}`;
+        this.updateUI();
+        
+        // 重新渲染數學公式
+        MathJaxLoader.ensure(() => {
+            if(window.MathJax) MathJax.typesetPromise();
+        });
     },
-    reset() { if(confirm("確定重置？")) { localStorage.clear(); location.reload(); } }
-};
-Core.init();
+    
+    exportErrors() {
+        if(Analytics.errors.length === 0) {
+            alert("暫無錯誤記錄可導出");
+            return;
+        }
+        
+        const exportData = {
+            exportTime: new Date().toLocaleString('zh-Hant'),
+            totalErrors: Analytics.errors.length,
+            errors: Analytics.errors.map(err => ({
+                type: err.type,
+                time: err.time,
+                question: err.q,
+                answer: err.a,
+                steps: err.s
+            }))
+        };
+        
+        const blob = new Blob([JSON.stringify(exportData, null, 2)], {type: 'application/json'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `錯誤之書_${new Date().toISOString().split('T')[0]}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        alert(`已導出 ${Analytics.errors.length} 條錯誤記錄`);
+    },
+    
+    clearErrors() {
+        Analytics.clearErrors();
+    },
+    
+    save() { 
+        localStorage.setItem('math_hero_p', JSON.stringify(this.p)); 
+        this.updateUI(); 
+    },
+    
+    load() {
+        const d = localStorage.getItem('math_hero_p');
+        if(d) { 
+            this.p = JSON.parse(d); 
+            document.getElementById('view-setup').style.display='none'; 
+            document.getElementById('view-main').style.display='block'; 
+            this.updateUI(); 
+        }
+    },
+    
+updateUI() {
+        // 更新顯示數據
+        document.getElementById('ds-name').innerText = this.p.name;
+        document.getElementById('ds-level').innerText = this.p.level;
+        document.getElementById('ds-exp').innerText = this.p.exp;
+        
+        ['str', 'int', 'wis', 'luc', 'dex', 'vit'].forEach(k => {
+            const el = document.getElementById(`stat-${k}`);
+            if(el) el.innerText = this.p[k];
+        });
+
+        // 更新 BOSS 按鈕狀態
+        const bossTri = document.getElementById('btn-boss-tri');
+        const bossProb = document.getElementById('btn-boss-prob');
+        
+        if(bossTri) bossTri.className = `opt-btn boss-btn ${this.p.str >= 100 ? 'unlocked' : ''}`;
+        if(bossProb) bossProb.className = `opt-btn boss-btn ${this.p.int >= 100 ? 'unlocked' : ''}`;
+        
+        // 更新修煉建議
+        const recommendations = [];
+        const total = this.p.str + this.p.int + this.p.wis;
+        
+        if(total < 50) {
+            recommendations.push("🔰 新手勇者，開始修煉吧！");
+        } else if(total < 150) {
+            recommendations.push("⚔️ 成長中的勇者，繼續努力！");
+        } else if(total < 300) {
+            recommendations.push("🏆 熟練的勇者，挑戰BOSS吧！");
+        } else {
+            recommendations.push("👑 傳奇勇者，繼續創造記錄！");
+        }
+        
+        // 找出最高和最低屬性
+        const mainAttrs = [
+            {name: '力量(STR)', value: this.p.str, key: 'str'},
+            {name: '智力(INT)', value: this.p.int, key: 'int'},
+            {name: '智慧(WIS)', value: this.p.wis, key: 'wis'}
+        ];
+        
+        mainAttrs.sort((a, b) => b.value - a.value);
+        
+        if(mainAttrs[0].value > 0) {
+            recommendations.push(`🏅 最強屬性：${mainAttrs[0].name} (${mainAttrs[0].value})`);
+        }
+        
+        // --- 修正的重點在這裡 ---
+        // 確保樣板字串 `${...}` 正確閉合
+if(mainAttrs[2].value < mainAttrs[0].value * 0.5) {
+             recommendations.push(`⚠️ 建議加強：${mainAttrs[2].name}`);
+        }
+
+        const recEl = document.getElementById('ai-recommendation');
+        if(recEl) recEl.innerHTML = recommendations.join('<br>');
+
+        Analytics.updateUI();
+    },
+
+    // 補上這段 handleStart，確保按鈕有反應
+    handleStart: function() {
+        const nameInput = document.getElementById('in-name');
+        const name = nameInput.value.trim();
+        
+        if (!name) {
+            alert("請輸入勇者名稱！");
+            return;
+        }
+
+        this.p.name = name;
+        
+        // 切換畫面
+        document.getElementById('ds-name').innerText = name;
+        document.getElementById('view-setup').style.display = 'none';
+        document.getElementById('view-main').style.display = 'block';
+        
+        this.updateUI();
+    },
+
+    // 其他可能需要的輔助函數 (確保 Core 完整性)
+    backToMain: function() {
+        document.querySelectorAll('.attribute-menu, #view-errors').forEach(el => el.style.display = 'none');
+        document.getElementById('main-menu').style.display = 'block';
+        document.getElementById('view-main').style.display = 'block';
+    },
+
+    showAttributeMenu: function(type) {
+        document.getElementById('main-menu').style.display = 'none';
+        const menuId = 'menu-' + type;
+        const menu = document.getElementById(menuId);
+        if(menu) menu.style.display = 'block';
+    }
+
+}; // 這裡結束 Core 物件
 </script>
 </body>
 </html>
